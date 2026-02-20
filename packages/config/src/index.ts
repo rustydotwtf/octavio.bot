@@ -16,7 +16,10 @@ export interface RepoRef {
 }
 
 export interface CliInput extends RepoRef {
+  findingsOutputPath?: string;
   instructionsPath: string;
+  previousFindingsPath?: string;
+  resultOutputPath?: string;
   workspaceDirectory: string;
   reportOutputPath?: string;
 }

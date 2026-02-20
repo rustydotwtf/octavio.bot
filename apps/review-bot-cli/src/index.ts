@@ -1,4 +1,5 @@
 import { CodeReviewWorkflow } from "@octavio/agent-code-review";
+import type { ReviewFinding } from "@octavio/agent-code-review";
 import { loadRuntimeEnv, resolveWorkspaceDirectory } from "@octavio/config";
 import type { CliInput } from "@octavio/config";
 import { GitHubReviewClient } from "@octavio/github-review";
@@ -13,7 +14,7 @@ const parseArgs = (argv: string[]): CliInput => {
 
     if (!key?.startsWith("--") || !value) {
       throw new Error(
-        "Invalid arguments. Expected --owner --repo --pr --instructions [--workdir] [--report-output]."
+        "Invalid arguments. Expected --owner --repo --pr --instructions [--workdir] [--report-output] [--findings-output] [--result-output] [--previous-findings]."
       );
     }
 
@@ -35,11 +36,14 @@ const parseArgs = (argv: string[]): CliInput => {
   }
 
   return {
+    findingsOutputPath: flags.get("findings-output"),
     instructionsPath,
     owner,
+    previousFindingsPath: flags.get("previous-findings"),
     pullNumber,
     repo,
     reportOutputPath: flags.get("report-output"),
+    resultOutputPath: flags.get("result-output"),
     workspaceDirectory,
   };
 };
@@ -54,11 +58,58 @@ const defaultFindingsPath = (pullNumber: number): string => {
   return `findings-pr-${pullNumber}-${timestamp}.json`;
 };
 
+const defaultResultPath = (pullNumber: number): string => {
+  const timestamp = new Date().toISOString().replaceAll(/[:.]/gu, "-");
+  return `result-pr-${pullNumber}-${timestamp}.json`;
+};
+
+const isReviewFinding = (value: unknown): value is ReviewFinding => {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const candidate = value as Partial<ReviewFinding>;
+  return (
+    typeof candidate.comment === "string" &&
+    typeof candidate.fingerprint === "string" &&
+    typeof candidate.id === "string" &&
+    typeof candidate.line === "number" &&
+    Number.isInteger(candidate.line) &&
+    candidate.line > 0 &&
+    typeof candidate.path === "string" &&
+    typeof candidate.severity === "string" &&
+    typeof candidate.title === "string"
+  );
+};
+
+const readPreviousFindings = async (
+  previousFindingsPath: string | undefined
+): Promise<ReviewFinding[]> => {
+  if (!previousFindingsPath) {
+    return [];
+  }
+
+  const file = Bun.file(previousFindingsPath);
+  if (!(await file.exists())) {
+    return [];
+  }
+
+  const parsed = (await file.json()) as unknown;
+  if (!Array.isArray(parsed)) {
+    return [];
+  }
+
+  return parsed.filter((item) => isReviewFinding(item));
+};
+
 const run = async (): Promise<void> => {
   const cliInput = parseArgs(process.argv.slice(2));
   const env = loadRuntimeEnv();
 
   const instructionsMarkdown = await Bun.file(cliInput.instructionsPath).text();
+  const previousFindings = await readPreviousFindings(
+    cliInput.previousFindingsPath
+  );
 
   const githubClient = new GitHubReviewClient({
     token: env.GITHUB_TOKEN,
@@ -78,6 +129,7 @@ const run = async (): Promise<void> => {
 
   const result = await workflow.run({
     instructionsMarkdown,
+    previousFindings,
     repo: {
       owner: cliInput.owner,
       pullNumber: cliInput.pullNumber,
@@ -89,16 +141,40 @@ const run = async (): Promise<void> => {
     cliInput.reportOutputPath ?? defaultReportPath(cliInput.pullNumber);
   await Bun.write(reportPath, result.reportMarkdown);
 
-  const findingsPath = defaultFindingsPath(cliInput.pullNumber);
+  const findingsPath =
+    cliInput.findingsOutputPath ?? defaultFindingsPath(cliInput.pullNumber);
   await Bun.write(
     findingsPath,
     `${JSON.stringify(result.findings, null, 2)}\n`
   );
 
+  const resultPath =
+    cliInput.resultOutputPath ?? defaultResultPath(cliInput.pullNumber);
+  await Bun.write(
+    resultPath,
+    `${JSON.stringify(
+      {
+        comparison: {
+          new: result.comparison.newFindings.length,
+          persisting: result.comparison.persistingFindings.length,
+          resolved: result.comparison.resolvedFindings.length,
+        },
+        hasBlockingFindings: result.hasBlockingFindings,
+        summary: result.summary,
+      },
+      null,
+      2
+    )}\n`
+  );
+
   process.stdout.write(`Report written: ${reportPath}\n`);
   process.stdout.write(`Findings written: ${findingsPath}\n`);
+  process.stdout.write(`Result written: ${resultPath}\n`);
   process.stdout.write("Review summary:\n");
   process.stdout.write(`${result.summary}\n`);
+  process.stdout.write(
+    `Comparison: new=${result.comparison.newFindings.length} persisting=${result.comparison.persistingFindings.length} resolved=${result.comparison.resolvedFindings.length}\n`
+  );
 
   if (result.hasBlockingFindings) {
     process.stderr.write("Blocking findings detected.\n");

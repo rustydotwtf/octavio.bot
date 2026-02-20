@@ -12,10 +12,18 @@ export interface CodeReviewWorkflowConfig {
 
 export interface ReviewRunInput {
   instructionsMarkdown: string;
+  previousFindings?: ReviewFinding[];
   repo: RepoRef;
 }
 
+export interface FindingsComparison {
+  newFindings: ReviewFinding[];
+  persistingFindings: ReviewFinding[];
+  resolvedFindings: ReviewFinding[];
+}
+
 export interface ReviewRunResult {
+  comparison: FindingsComparison;
   hasBlockingFindings: boolean;
   findings: ReviewFinding[];
   reportMarkdown: string;
@@ -126,6 +134,34 @@ const parseFindingsFromReport = (reportMarkdown: string): ReviewFinding[] => {
   }
 };
 
+const compareFindings = (
+  currentFindings: ReviewFinding[],
+  previousFindings: ReviewFinding[]
+): FindingsComparison => {
+  const previousByFingerprint = new Map(
+    previousFindings.map((finding) => [finding.fingerprint, finding])
+  );
+  const currentByFingerprint = new Map(
+    currentFindings.map((finding) => [finding.fingerprint, finding])
+  );
+
+  const newFindings = currentFindings.filter(
+    (finding) => !previousByFingerprint.has(finding.fingerprint)
+  );
+  const persistingFindings = currentFindings.filter((finding) =>
+    previousByFingerprint.has(finding.fingerprint)
+  );
+  const resolvedFindings = previousFindings.filter(
+    (finding) => !currentByFingerprint.has(finding.fingerprint)
+  );
+
+  return {
+    newFindings,
+    persistingFindings,
+    resolvedFindings,
+  };
+};
+
 const truncatePatch = (patch: string | null): string => {
   if (!patch) {
     return "";
@@ -180,11 +216,13 @@ export class CodeReviewWorkflow {
     });
 
     const findings = parseFindingsFromReport(reportMarkdown);
+    const comparison = compareFindings(findings, input.previousFindings ?? []);
     const blockingFindings = findings.filter((finding) =>
       BLOCKING_SEVERITIES.has(finding.severity)
     );
 
     return {
+      comparison,
       findings,
       hasBlockingFindings: blockingFindings.length > 0,
       reportMarkdown,
