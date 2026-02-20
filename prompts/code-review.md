@@ -1,3 +1,10 @@
+---
+policy:
+  fail_on:
+    - "new:critical"
+    - "new:high"
+---
+
 # Code Review Instructions
 
 Review this pull request with a focus on correctness, security, and maintainability.

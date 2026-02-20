@@ -144,18 +144,20 @@ This repository now uses a Bun workspace monorepo:
 - `apps/review-bot-cli` - executable CLI for the review workflow
 - `packages/config` - runtime env and CLI config parsing
 - `packages/opencode-runner` - OpenCode SDK wrapper for phase 1 report generation
-- `packages/github-review` - GitHub REST helpers for PR metadata and comments
-- `packages/agent-runtime` - AI SDK gateway model factory
-- `packages/agent-code-review` - phase 2 + 3 orchestration (evaluate and apply comments)
+- `packages/github-review` - GitHub REST helpers for PR metadata and changed files
+- `packages/agent-runtime` - AI SDK gateway model factory (currently not used by CI check path)
+- `packages/agent-code-review` - report parsing, prior-run comparison, and instruction-driven policy evaluation
 
 ### Common Commands
 
 - Run bot: `bun run review-bot --owner <owner> --repo <repo> --pr <number> --instructions prompts/code-review.md --workdir .`
+- Run GitHub check workflow: `.github/workflows/review-check.yml` on pull requests
 - Lint and format check: `bun x ultracite check`
 - Auto-fix style/lint: `bun x ultracite fix`
 
 ### Runtime Expectations
 
-- `.env` should include `GITHUB_TOKEN` and `VERCEL_AI_GATEWAY_API_KEY`
+- `.env` should include `GITHUB_TOKEN` and OpenCode connection settings (`OPENCODE_MODEL`, `OPENCODE_HOSTNAME`, `OPENCODE_PORT`)
 - The OpenCode phase is configured with `edit: deny` and `external_directory: deny`
 - Keep OpenCode prompts constrained to the provided workspace directory
+- Fail policy is configured in the instructions markdown frontmatter (`policy.fail_on`)

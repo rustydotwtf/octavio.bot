@@ -123,10 +123,16 @@ jobs:
               `- New findings: ${result.comparison.new}`,
               `- Persisting findings: ${result.comparison.persisting}`,
               `- Resolved findings: ${result.comparison.resolved}`,
+              `- Policy source: ${result.policy.source}`,
+              `- Policy rules: ${result.policy.failOnRules.join(", ") || "none"}`,
+              `- Matched rules: ${result.policy.matchedRules.join(", ") || "none"}`,
               "",
               "### Summary",
               result.summary,
             ];
+            if (Array.isArray(result.policy.warnings) && result.policy.warnings.length > 0) {
+              lines.push("", "### Policy Warnings", ...result.policy.warnings.map((warning) => `- ${warning}`));
+            }
             await Bun.write(Bun.stdout, `${lines.join("\n")}\n`);' >> "$GITHUB_STEP_SUMMARY"
           else
             printf '## Octavio Review\n\nRun failed before report generation.\n' >> "$GITHUB_STEP_SUMMARY"

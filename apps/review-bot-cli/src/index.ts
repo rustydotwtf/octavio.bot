@@ -160,6 +160,7 @@ const run = async (): Promise<void> => {
           resolved: result.comparison.resolvedFindings.length,
         },
         hasBlockingFindings: result.hasBlockingFindings,
+        policy: result.policy,
         summary: result.summary,
       },
       null,
@@ -172,6 +173,14 @@ const run = async (): Promise<void> => {
   process.stdout.write(`Result written: ${resultPath}\n`);
   process.stdout.write("Review summary:\n");
   process.stdout.write(`${result.summary}\n`);
+  process.stdout.write(
+    `Policy source: ${result.policy.source}; rules=${result.policy.failOnRules.join(", ") || "none"}; matched=${result.policy.matchedRules.join(", ") || "none"}\n`
+  );
+  if (result.policy.warnings.length > 0) {
+    process.stdout.write(
+      `Policy warnings: ${result.policy.warnings.join(" | ")}\n`
+    );
+  }
   process.stdout.write(
     `Comparison: new=${result.comparison.newFindings.length} persisting=${result.comparison.persistingFindings.length} resolved=${result.comparison.resolvedFindings.length}\n`
   );
