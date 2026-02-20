@@ -5,10 +5,6 @@ const envSchema = z.object({
   OPENCODE_HOSTNAME: z.string().default("127.0.0.1"),
   OPENCODE_MODEL: z.string().default("openai/gpt-5"),
   OPENCODE_PORT: z.coerce.number().int().positive().default(4096),
-  REVIEW_MODEL: z.string().default("anthropic/claude-sonnet-4.5"),
-  VERCEL_AI_GATEWAY_API_KEY: z
-    .string()
-    .min(1, "VERCEL_AI_GATEWAY_API_KEY is required"),
 });
 
 export type RuntimeEnv = z.infer<typeof envSchema>;

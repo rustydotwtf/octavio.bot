@@ -1,19 +1,13 @@
-import { createGatewayModel } from "@octavio/agent-runtime";
 import type { RepoRef } from "@octavio/config";
-import { GitHubReviewClient } from "@octavio/github-review";
 import type {
+  GitHubReviewClient,
   PullRequestFile,
-  PullRequestReviewComment,
 } from "@octavio/github-review";
 import type { OpenCodeReportRunner } from "@octavio/opencode-runner";
-import { stepCountIs, ToolLoopAgent, tool } from "ai";
-import { z } from "zod";
 
 export interface CodeReviewWorkflowConfig {
   githubClient: GitHubReviewClient;
   opencodeRunner: OpenCodeReportRunner;
-  reviewModel: string;
-  vercelGatewayApiKey: string;
 }
 
 export interface ReviewRunInput {
@@ -22,9 +16,20 @@ export interface ReviewRunInput {
 }
 
 export interface ReviewRunResult {
-  appliedActions: string[];
+  hasBlockingFindings: boolean;
+  findings: ReviewFinding[];
   reportMarkdown: string;
   summary: string;
+}
+
+export interface ReviewFinding {
+  fingerprint: string;
+  comment: string;
+  id: string;
+  line: number;
+  path: string;
+  severity: "low" | "medium" | "high" | "critical";
+  title: string;
 }
 
 interface ReportFinding {
@@ -36,13 +41,44 @@ interface ReportFinding {
   title: string;
 }
 
+const BLOCKING_SEVERITIES = new Set(["high", "critical"]);
+
 const stripCodeFence = (jsonBlock: string): string =>
   jsonBlock
     .replace(/^```json\s*/u, "")
     .replace(/```$/u, "")
     .trim();
 
-const parseFindingsFromReport = (reportMarkdown: string): ReportFinding[] => {
+const normalizeSeverity = (
+  severity: string
+): "low" | "medium" | "high" | "critical" | null => {
+  const normalized = severity.trim().toLowerCase();
+  if (
+    normalized === "low" ||
+    normalized === "medium" ||
+    normalized === "high" ||
+    normalized === "critical"
+  ) {
+    return normalized;
+  }
+
+  return null;
+};
+
+const computeFingerprint = (finding: {
+  path: string;
+  line: number;
+  severity: string;
+  title: string;
+}): string =>
+  [
+    finding.path.trim().toLowerCase(),
+    String(finding.line),
+    finding.severity.trim().toLowerCase(),
+    finding.title.trim().toLowerCase(),
+  ].join("|");
+
+const parseFindingsFromReport = (reportMarkdown: string): ReviewFinding[] => {
   const blockMatch = reportMarkdown.match(/```json[\s\S]*?```/u);
   if (!blockMatch) {
     return [];
@@ -53,15 +89,38 @@ const parseFindingsFromReport = (reportMarkdown: string): ReportFinding[] => {
       findings?: ReportFinding[];
     };
 
-    return (
-      parsed.findings?.filter(
-        (finding) =>
-          Boolean(finding.id) &&
-          Boolean(finding.path) &&
-          Number.isInteger(finding.line) &&
-          finding.line > 0
-      ) ?? []
-    );
+    const rawFindings = parsed.findings ?? [];
+    const findings: ReviewFinding[] = [];
+
+    for (const finding of rawFindings) {
+      const severity = normalizeSeverity(finding.severity);
+      if (
+        !severity ||
+        !finding.id ||
+        !finding.path ||
+        !Number.isInteger(finding.line) ||
+        finding.line <= 0
+      ) {
+        continue;
+      }
+
+      findings.push({
+        comment: finding.comment,
+        fingerprint: computeFingerprint({
+          line: finding.line,
+          path: finding.path,
+          severity,
+          title: finding.title,
+        }),
+        id: finding.id,
+        line: finding.line,
+        path: finding.path,
+        severity,
+        title: finding.title,
+      });
+    }
+
+    return findings;
   } catch {
     return [];
   }
@@ -100,19 +159,6 @@ ${truncatePatch(file.patch)}`
   ].join("\n");
 };
 
-const formatComments = (comments: PullRequestReviewComment[]): string => {
-  if (comments.length === 0) {
-    return "No existing review comments.";
-  }
-
-  return comments
-    .map(
-      (comment) =>
-        `- id=${comment.id} user=${comment.userLogin} path=${comment.path} line=${comment.line ?? "n/a"}\n${comment.body}`
-    )
-    .join("\n\n");
-};
-
 export class CodeReviewWorkflow {
   private readonly config: CodeReviewWorkflowConfig;
 
@@ -127,9 +173,6 @@ export class CodeReviewWorkflow {
     const files = await this.config.githubClient.listPullRequestFiles(
       input.repo
     );
-    const existingComments = await this.config.githubClient.listReviewComments(
-      input.repo
-    );
 
     const reportMarkdown = await this.config.opencodeRunner.generateReport({
       contextMarkdown: formatPullRequestContext(pullRequest, files),
@@ -137,102 +180,18 @@ export class CodeReviewWorkflow {
     });
 
     const findings = parseFindingsFromReport(reportMarkdown);
-    const appliedActions: string[] = [];
-    const model = createGatewayModel({
-      apiKey: this.config.vercelGatewayApiKey,
-      model: this.config.reviewModel,
-    });
-
-    const agent = new ToolLoopAgent({
-      instructions: `You are a pull request comment reconciliation agent.
-
-Use the report and existing comments to decide whether to add or update comments.
-
-Rules:
-- Prefer updating existing bot comments over creating new duplicates.
-- Only comment with concrete file path + line anchors.
-- Keep each comment concise and actionable.
-- Always include the finding fingerprint tag in each comment body.
-- If no action is needed, explain why in your final text response.`,
-      model,
-      stopWhen: stepCountIs(12),
-      tools: {
-        createComment: tool({
-          description: "Create a new GitHub PR review comment",
-          execute: async ({ body, findingId, line, path }) => {
-            const fingerprint =
-              GitHubReviewClient.buildFingerprintTag(findingId);
-            const formattedBody = `${body.trim()}\n\n${fingerprint}`;
-            const created = await this.config.githubClient.createReviewComment(
-              input.repo,
-              {
-                body: formattedBody,
-                line,
-                path,
-              },
-              pullRequest.headSha
-            );
-            appliedActions.push(`created:${created.id}`);
-            return {
-              commentId: created.id,
-            };
-          },
-          inputSchema: z.object({
-            body: z.string().min(1),
-            findingId: z.string().min(1),
-            line: z.number().int().positive(),
-            path: z.string().min(1),
-          }),
-        }),
-        updateComment: tool({
-          description: "Update an existing GitHub PR review comment",
-          execute: async ({ body, commentId, findingId }) => {
-            const fingerprint =
-              GitHubReviewClient.buildFingerprintTag(findingId);
-            const formattedBody = `${body.trim()}\n\n${fingerprint}`;
-            const updated = await this.config.githubClient.updateReviewComment(
-              input.repo,
-              commentId,
-              formattedBody
-            );
-            appliedActions.push(`updated:${updated.id}`);
-            return {
-              commentId: updated.id,
-            };
-          },
-          inputSchema: z.object({
-            body: z.string().min(1),
-            commentId: z.number().int().positive(),
-            findingId: z.string().min(1),
-          }),
-        }),
-      },
-    });
-
-    const prompt = [
-      "Evaluate the report and existing comments, then call tools to apply updates.",
-      "",
-      "## Report",
-      reportMarkdown,
-      "",
-      "## Parsed Findings",
-      JSON.stringify({ findings }, null, 2),
-      "",
-      "## Existing Comments",
-      formatComments(existingComments),
-      "",
-      "When deciding update targets, prefer comments with matching finding fingerprint tags.",
-      "If none match, update only if the same file+line+issue is clearly equivalent; otherwise create.",
-    ].join("\n");
-
-    const result = await agent.generate({
-      prompt,
-    });
+    const blockingFindings = findings.filter((finding) =>
+      BLOCKING_SEVERITIES.has(finding.severity)
+    );
 
     return {
-      appliedActions,
+      findings,
+      hasBlockingFindings: blockingFindings.length > 0,
       reportMarkdown,
-      summary: result.text,
+      summary:
+        blockingFindings.length > 0
+          ? `Found ${blockingFindings.length} blocking findings (${blockingFindings.map((finding) => finding.severity).join(", ")}).`
+          : "No blocking findings were detected.",
     };
   }
 }

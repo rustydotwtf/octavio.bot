@@ -49,6 +49,11 @@ const defaultReportPath = (pullNumber: number): string => {
   return `report-pr-${pullNumber}-${timestamp}.md`;
 };
 
+const defaultFindingsPath = (pullNumber: number): string => {
+  const timestamp = new Date().toISOString().replaceAll(/[:.]/gu, "-");
+  return `findings-pr-${pullNumber}-${timestamp}.json`;
+};
+
 const run = async (): Promise<void> => {
   const cliInput = parseArgs(process.argv.slice(2));
   const env = loadRuntimeEnv();
@@ -69,8 +74,6 @@ const run = async (): Promise<void> => {
   const workflow = new CodeReviewWorkflow({
     githubClient,
     opencodeRunner,
-    reviewModel: env.REVIEW_MODEL,
-    vercelGatewayApiKey: env.VERCEL_AI_GATEWAY_API_KEY,
   });
 
   const result = await workflow.run({
@@ -86,12 +89,21 @@ const run = async (): Promise<void> => {
     cliInput.reportOutputPath ?? defaultReportPath(cliInput.pullNumber);
   await Bun.write(reportPath, result.reportMarkdown);
 
-  process.stdout.write(`Report written: ${reportPath}\n`);
-  process.stdout.write(
-    `Actions: ${result.appliedActions.join(", ") || "none"}\n`
+  const findingsPath = defaultFindingsPath(cliInput.pullNumber);
+  await Bun.write(
+    findingsPath,
+    `${JSON.stringify(result.findings, null, 2)}\n`
   );
-  process.stdout.write("Agent summary:\n");
+
+  process.stdout.write(`Report written: ${reportPath}\n`);
+  process.stdout.write(`Findings written: ${findingsPath}\n`);
+  process.stdout.write("Review summary:\n");
   process.stdout.write(`${result.summary}\n`);
+
+  if (result.hasBlockingFindings) {
+    process.stderr.write("Blocking findings detected.\n");
+    process.exitCode = 1;
+  }
 };
 
 try {
