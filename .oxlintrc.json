@@ -1,0 +1,18 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "extends": ["./node_modules/ultracite/config/oxlint/core/.oxlintrc.json"],
+  "rules": {
+    "func-style": "off",
+    "jest/require-hook": "off",
+    "max-lines": [
+      "error",
+      {
+        "max": 500,
+        "skipBlankLines": true,
+        "skipComments": true
+      }
+    ],
+    "max-statements": ["error", 120],
+    "no-void": ["error", { "allowAsStatement": true }]
+  }
+}
