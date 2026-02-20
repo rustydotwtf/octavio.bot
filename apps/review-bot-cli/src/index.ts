@@ -1,0 +1,103 @@
+import { CodeReviewWorkflow } from "@octavio/agent-code-review";
+import { loadRuntimeEnv, resolveWorkspaceDirectory } from "@octavio/config";
+import type { CliInput } from "@octavio/config";
+import { GitHubReviewClient } from "@octavio/github-review";
+import { OpenCodeReportRunner } from "@octavio/opencode-runner";
+
+const parseArgs = (argv: string[]): CliInput => {
+  const flags = new Map<string, string>();
+
+  for (let index = 0; index < argv.length; index += 2) {
+    const key = argv[index];
+    const value = argv[index + 1];
+
+    if (!key?.startsWith("--") || !value) {
+      throw new Error(
+        "Invalid arguments. Expected --owner --repo --pr --instructions [--workdir] [--report-output]."
+      );
+    }
+
+    flags.set(key.slice(2), value);
+  }
+
+  const owner = flags.get("owner");
+  const repo = flags.get("repo");
+  const pullNumber = Number.parseInt(flags.get("pr") ?? "", 10);
+  const instructionsPath = flags.get("instructions");
+  const workspaceDirectory = resolveWorkspaceDirectory(
+    flags.get("workdir") ?? process.cwd()
+  );
+
+  if (!owner || !repo || !instructionsPath || Number.isNaN(pullNumber)) {
+    throw new Error(
+      "Missing required args. Example: --owner acme --repo web --pr 123 --instructions prompts/code-review.md"
+    );
+  }
+
+  return {
+    instructionsPath,
+    owner,
+    pullNumber,
+    repo,
+    reportOutputPath: flags.get("report-output"),
+    workspaceDirectory,
+  };
+};
+
+const defaultReportPath = (pullNumber: number): string => {
+  const timestamp = new Date().toISOString().replaceAll(/[:.]/gu, "-");
+  return `report-pr-${pullNumber}-${timestamp}.md`;
+};
+
+const run = async (): Promise<void> => {
+  const cliInput = parseArgs(process.argv.slice(2));
+  const env = loadRuntimeEnv();
+
+  const instructionsMarkdown = await Bun.file(cliInput.instructionsPath).text();
+
+  const githubClient = new GitHubReviewClient({
+    token: env.GITHUB_TOKEN,
+  });
+
+  const opencodeRunner = new OpenCodeReportRunner({
+    hostname: env.OPENCODE_HOSTNAME,
+    model: env.OPENCODE_MODEL,
+    port: env.OPENCODE_PORT,
+    workspaceDirectory: cliInput.workspaceDirectory,
+  });
+
+  const workflow = new CodeReviewWorkflow({
+    githubClient,
+    opencodeRunner,
+    reviewModel: env.REVIEW_MODEL,
+    vercelGatewayApiKey: env.VERCEL_AI_GATEWAY_API_KEY,
+  });
+
+  const result = await workflow.run({
+    instructionsMarkdown,
+    repo: {
+      owner: cliInput.owner,
+      pullNumber: cliInput.pullNumber,
+      repo: cliInput.repo,
+    },
+  });
+
+  const reportPath =
+    cliInput.reportOutputPath ?? defaultReportPath(cliInput.pullNumber);
+  await Bun.write(reportPath, result.reportMarkdown);
+
+  process.stdout.write(`Report written: ${reportPath}\n`);
+  process.stdout.write(
+    `Actions: ${result.appliedActions.join(", ") || "none"}\n`
+  );
+  process.stdout.write("Agent summary:\n");
+  process.stdout.write(`${result.summary}\n`);
+};
+
+try {
+  await run();
+} catch (error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  process.stderr.write(`review-bot failed: ${message}\n`);
+  process.exitCode = 1;
+}

@@ -1,0 +1,12 @@
+{
+  "name": "@octavio/agent-runtime",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@ai-sdk/gateway": "^3.0.52",
+    "ai": "^6.0.94"
+  }
+}

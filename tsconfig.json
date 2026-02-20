@@ -10,6 +10,14 @@
 
     // Bundler mode
     "moduleResolution": "bundler",
+    "baseUrl": ".",
+    "paths": {
+      "@octavio/agent-code-review": ["packages/agent-code-review/src/index.ts"],
+      "@octavio/agent-runtime": ["packages/agent-runtime/src/index.ts"],
+      "@octavio/config": ["packages/config/src/index.ts"],
+      "@octavio/github-review": ["packages/github-review/src/index.ts"],
+      "@octavio/opencode-runner": ["packages/opencode-runner/src/index.ts"]
+    },
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
     "noEmit": true,

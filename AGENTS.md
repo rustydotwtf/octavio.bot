@@ -1,3 +1,13 @@
+# Golden Rule
+
+AGENTS.md is a living guide for agents working in this repo. Edit it freely.
+
+If you discover a mismatch between this file and the actual project (conventions, commands, structure, expectations), update AGENTS.md as part of your change.
+
+As the project grows, add AGENTS.md files to folders that need extra context. These files are auto-loaded when that folder is explored.
+
+---
+
 # Ultracite Code Standards
 
 This project uses **Ultracite**, a zero-config preset that enforces strict code quality standards through automated formatting and linting.
@@ -124,3 +134,28 @@ Oxlint + Oxfmt's linter will catch most issues automatically. Focus your attenti
 ---
 
 Most formatting and common issues are automatically fixed by Oxlint + Oxfmt. Run `bun x ultracite fix` before committing to ensure compliance.
+
+---
+
+## Project Layout (Monorepo)
+
+This repository now uses a Bun workspace monorepo:
+
+- `apps/review-bot-cli` - executable CLI for the review workflow
+- `packages/config` - runtime env and CLI config parsing
+- `packages/opencode-runner` - OpenCode SDK wrapper for phase 1 report generation
+- `packages/github-review` - GitHub REST helpers for PR metadata and comments
+- `packages/agent-runtime` - AI SDK gateway model factory
+- `packages/agent-code-review` - phase 2 + 3 orchestration (evaluate and apply comments)
+
+### Common Commands
+
+- Run bot: `bun run review-bot --owner <owner> --repo <repo> --pr <number> --instructions prompts/code-review.md --workdir .`
+- Lint and format check: `bun x ultracite check`
+- Auto-fix style/lint: `bun x ultracite fix`
+
+### Runtime Expectations
+
+- `.env` should include `GITHUB_TOKEN` and `VERCEL_AI_GATEWAY_API_KEY`
+- The OpenCode phase is configured with `edit: deny` and `external_directory: deny`
+- Keep OpenCode prompts constrained to the provided workspace directory

@@ -1,15 +1,22 @@
 {
   "name": "octavio-review",
   "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "type": "module",
-  "module": "index.ts",
   "scripts": {
+    "review-bot": "bun run apps/review-bot-cli/src/index.ts",
     "check": "ultracite check",
     "fix": "ultracite fix",
     "prepare": "lefthook install"
   },
   "dependencies": {
-    "@opencode-ai/sdk": "^1.2.9"
+    "@ai-sdk/gateway": "^3.0.52",
+    "@opencode-ai/sdk": "^1.2.9",
+    "ai": "^6.0.94",
+    "zod": "^4.1.12"
   },
   "devDependencies": {
     "@types/bun": "latest",

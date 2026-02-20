@@ -1,0 +1,11 @@
+{
+  "name": "@octavio/opencode-runner",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@opencode-ai/sdk": "^1.2.9"
+  }
+}

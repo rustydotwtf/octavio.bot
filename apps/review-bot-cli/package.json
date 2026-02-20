@@ -1,0 +1,10 @@
+{
+  "name": "@octavio/review-bot-cli",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@octavio/agent-code-review": "workspace:*",
+    "@octavio/config": "workspace:*",
+    "@octavio/github-review": "workspace:*"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "name": "@octavio/agent-code-review",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@octavio/agent-runtime": "workspace:*",
+    "@octavio/config": "workspace:*",
+    "@octavio/github-review": "workspace:*",
+    "@octavio/opencode-runner": "workspace:*",
+    "ai": "^6.0.94",
+    "zod": "^4.1.12"
+  }
+}
