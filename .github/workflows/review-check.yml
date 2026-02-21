@@ -114,20 +114,25 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
           OPENCODE_HOSTNAME: ${{ vars.OPENCODE_HOSTNAME || '127.0.0.1' }}
+          OCTAVIO_INSTRUCTIONS_PROFILE: ${{ vars.OCTAVIO_INSTRUCTIONS_PROFILE || '' }}
           OPENCODE_MODEL: ${{ vars.OPENCODE_MODEL || 'opencode/minimax-m2.5-free' }}
           OPENCODE_PORT: ${{ vars.OPENCODE_PORT || '4096' }}
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
         run: |
           mkdir -p artifacts
           PREVIOUS_ARGS=""
+          PROFILE_ARGS=""
           if [ -f ".previous-findings/findings.json" ]; then
             PREVIOUS_ARGS="--previous-findings .previous-findings/findings.json"
+          fi
+          if [ -n "$OCTAVIO_INSTRUCTIONS_PROFILE" ]; then
+            PROFILE_ARGS="--instructions-profile $OCTAVIO_INSTRUCTIONS_PROFILE"
           fi
           bun run review-bot \
             --owner "${{ github.repository_owner }}" \
             --repo "${{ github.event.repository.name }}" \
             --pr "${{ github.event.pull_request.number }}" \
-            --instructions prompts/code-review.md \
+            $PROFILE_ARGS \
             --workdir . \
             --report-output artifacts/report.md \
             --findings-output artifacts/findings.json \

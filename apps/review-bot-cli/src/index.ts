@@ -1,9 +1,22 @@
 import { CodeReviewWorkflow } from "@octavio/agent-code-review";
 import type { ReviewFinding } from "@octavio/agent-code-review";
-import { loadRuntimeEnv, resolveWorkspaceDirectory } from "@octavio/config";
-import type { CliInput } from "@octavio/config";
+import {
+  loadReviewConfig,
+  loadRuntimeEnv,
+  resolvePathFromWorkspace,
+  resolveWorkspaceDirectory,
+} from "@octavio/config";
+import type { CliInput, ReviewConfig } from "@octavio/config";
 import { GitHubReviewClient } from "@octavio/github-review";
 import { OpenCodeReportRunner } from "@octavio/opencode-runner";
+
+const DEFAULT_INSTRUCTIONS_PATH = "prompts/code-review.md";
+
+interface ResolvedInstructions {
+  instructionsPath: string;
+  policyFailOnRules?: string[];
+  profileName?: string;
+}
 
 const parseArgs = (argv: string[]): CliInput => {
   const flags = new Map<string, string>();
@@ -14,7 +27,7 @@ const parseArgs = (argv: string[]): CliInput => {
 
     if (!key?.startsWith("--") || !value) {
       throw new Error(
-        "Invalid arguments. Expected --owner --repo --pr --instructions [--workdir] [--report-output] [--findings-output] [--result-output] [--previous-findings]."
+        "Invalid arguments. Expected --owner --repo --pr [--instructions] [--instructions-profile] [--workdir] [--report-output] [--findings-output] [--result-output] [--previous-findings]."
       );
     }
 
@@ -29,15 +42,16 @@ const parseArgs = (argv: string[]): CliInput => {
     flags.get("workdir") ?? process.cwd()
   );
 
-  if (!owner || !repo || !instructionsPath || Number.isNaN(pullNumber)) {
+  if (!owner || !repo || Number.isNaN(pullNumber)) {
     throw new Error(
-      "Missing required args. Example: --owner acme --repo web --pr 123 --instructions prompts/code-review.md"
+      "Missing required args. Example: --owner acme --repo web --pr 123 [--instructions prompts/code-review.md] [--instructions-profile balanced]"
     );
   }
 
   return {
     findingsOutputPath: flags.get("findings-output"),
     instructionsPath,
+    instructionsProfile: flags.get("instructions-profile"),
     owner,
     previousFindingsPath: flags.get("previous-findings"),
     pullNumber,
@@ -45,6 +59,46 @@ const parseArgs = (argv: string[]): CliInput => {
     reportOutputPath: flags.get("report-output"),
     resultOutputPath: flags.get("result-output"),
     workspaceDirectory,
+  };
+};
+
+const resolveInstructions = (
+  cliInput: CliInput,
+  config: ReviewConfig | null
+): ResolvedInstructions => {
+  const selectedProfileName =
+    cliInput.instructionsProfile ?? config?.defaultProfile;
+  const selectedProfile = selectedProfileName
+    ? config?.profiles[selectedProfileName]
+    : undefined;
+
+  if (selectedProfileName && !selectedProfile) {
+    throw new Error(
+      `Instructions profile '${selectedProfileName}' was not found in .octavio/review.config.json.`
+    );
+  }
+
+  let resolvedPath = resolvePathFromWorkspace(
+    cliInput.workspaceDirectory,
+    DEFAULT_INSTRUCTIONS_PATH
+  );
+  if (selectedProfile) {
+    resolvedPath = resolvePathFromWorkspace(
+      cliInput.workspaceDirectory,
+      selectedProfile.instructionsPath
+    );
+  }
+  if (cliInput.instructionsPath) {
+    resolvedPath = resolvePathFromWorkspace(
+      cliInput.workspaceDirectory,
+      cliInput.instructionsPath
+    );
+  }
+
+  return {
+    instructionsPath: resolvedPath,
+    policyFailOnRules: selectedProfile?.policy?.failOn,
+    profileName: selectedProfileName,
   };
 };
 
@@ -105,8 +159,12 @@ const readPreviousFindings = async (
 const run = async (): Promise<void> => {
   const cliInput = parseArgs(process.argv.slice(2));
   const env = loadRuntimeEnv();
+  const reviewConfig = await loadReviewConfig(cliInput.workspaceDirectory);
+  const resolvedInstructions = resolveInstructions(cliInput, reviewConfig);
 
-  const instructionsMarkdown = await Bun.file(cliInput.instructionsPath).text();
+  const instructionsMarkdown = await Bun.file(
+    resolvedInstructions.instructionsPath
+  ).text();
   const previousFindings = await readPreviousFindings(
     cliInput.previousFindingsPath
   );
@@ -129,6 +187,7 @@ const run = async (): Promise<void> => {
 
   const result = await workflow.run({
     instructionsMarkdown,
+    policyFailOnRules: resolvedInstructions.policyFailOnRules,
     previousFindings,
     repo: {
       owner: cliInput.owner,
@@ -171,6 +230,14 @@ const run = async (): Promise<void> => {
   process.stdout.write(`Report written: ${reportPath}\n`);
   process.stdout.write(`Findings written: ${findingsPath}\n`);
   process.stdout.write(`Result written: ${resultPath}\n`);
+  process.stdout.write(
+    `Instructions path: ${resolvedInstructions.instructionsPath}\n`
+  );
+  if (resolvedInstructions.profileName) {
+    process.stdout.write(
+      `Instructions profile: ${resolvedInstructions.profileName}\n`
+    );
+  }
   process.stdout.write("Review summary:\n");
   process.stdout.write(`${result.summary}\n`);
   process.stdout.write(

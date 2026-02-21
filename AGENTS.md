@@ -150,7 +150,7 @@ This repository now uses a Bun workspace monorepo:
 
 ### Common Commands
 
-- Run bot: `bun run review-bot --owner <owner> --repo <repo> --pr <number> --instructions prompts/code-review.md --workdir .`
+- Run bot: `bun run review-bot --owner <owner> --repo <repo> --pr <number> [--instructions prompts/code-review.md] [--instructions-profile <name>] --workdir .`
 - Run GitHub check workflow: `.github/workflows/review-check.yml` on pull requests
 - Lint and format check: `bun x ultracite check`
 - Auto-fix style/lint: `bun x ultracite fix`
@@ -160,4 +160,12 @@ This repository now uses a Bun workspace monorepo:
 - `.env` should include `GITHUB_TOKEN`, OpenCode connection settings (`OPENCODE_HOSTNAME`, `OPENCODE_PORT`), and `OPENCODE_API_KEY` for OpenCode Zen; `OPENCODE_MODEL` is optional
 - The OpenCode phase is configured with `edit: deny` and `external_directory: deny`
 - Keep OpenCode prompts constrained to the provided workspace directory
-- Fail policy is configured in the instructions markdown frontmatter (`policy.fail_on`)
+- Fail policy can come from profile config (`policy.failOn`) or instruction frontmatter (`policy.fail_on`)
+
+### Instruction Profiles
+
+- Optional repo config file: `.octavio/review.config.json`
+- CLI supports `--instructions-profile <name>` to select a profile
+- Instruction resolution order: explicit `--instructions`, then profile, then `defaultProfile`, then `prompts/code-review.md`
+- Policy resolution order: profile `policy.failOn`, then instructions frontmatter `policy.fail_on`, then fail-open fallback
+- GitHub workflow can set `OCTAVIO_INSTRUCTIONS_PROFILE` repo variable to choose profile in CI

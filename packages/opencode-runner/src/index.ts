@@ -9,7 +9,14 @@ interface OpenCodeClient {
       query: { directory: string };
     }): Promise<{ data?: { id: string } }>;
     prompt(input: {
-      body: { parts: [{ text: string; type: "text" }] };
+      body: {
+        parts: [{ text: string; type: "text" }];
+        format?: {
+          type: "json_schema";
+          schema: unknown;
+          retryCount?: number;
+        };
+      };
       path: { id: string };
       query: { directory: string };
       responseStyle?: "data" | "fields";
@@ -67,6 +74,21 @@ export interface OpenCodeRunnerOptions {
 export interface GenerateReportInput {
   contextMarkdown: string;
   instructionsMarkdown: string;
+}
+
+export interface ReportFinding {
+  comment: string;
+  id: string;
+  line: number;
+  path: string;
+  severity: string;
+  title: string;
+}
+
+export interface GenerateReportResult {
+  reportMarkdown: string;
+  structuredFindings: ReportFinding[];
+  usedStructuredOutput: boolean;
 }
 
 const collectTextFromParts = (parts: Part[]): string => {
@@ -161,6 +183,72 @@ const extractResponseText = (response: { data?: unknown }): string | null => {
   return null;
 };
 
+const extractStructuredOutput = (response: { data?: unknown }): unknown => {
+  const data = response.data as
+    | {
+        info?: { structured_output?: unknown };
+        data?: { info?: { structured_output?: unknown } };
+      }
+    | undefined;
+
+  return data?.info?.structured_output ?? data?.data?.info?.structured_output;
+};
+
+const asStructuredFindings = (value: unknown): ReportFinding[] => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .filter((item) => item && typeof item === "object")
+    .map((item) => item as Partial<ReportFinding>)
+    .filter(
+      (item) =>
+        typeof item.comment === "string" &&
+        typeof item.id === "string" &&
+        typeof item.line === "number" &&
+        typeof item.path === "string" &&
+        typeof item.severity === "string" &&
+        typeof item.title === "string"
+    )
+    .map((item) => ({
+      comment: item.comment ?? "",
+      id: item.id ?? "",
+      line: item.line ?? 0,
+      path: item.path ?? "",
+      severity: item.severity ?? "",
+      title: item.title ?? "",
+    }));
+};
+
+const extractStructuredReport = (response: {
+  data?: unknown;
+}): GenerateReportResult | null => {
+  const structuredOutput = extractStructuredOutput(response);
+  if (!structuredOutput || typeof structuredOutput !== "object") {
+    return null;
+  }
+
+  const candidate = structuredOutput as {
+    findings?: unknown;
+    report_markdown?: unknown;
+  };
+  if (typeof candidate.report_markdown !== "string") {
+    return null;
+  }
+
+  const reportMarkdown = candidate.report_markdown.trim();
+  if (reportMarkdown.length === 0) {
+    return null;
+  }
+
+  return {
+    reportMarkdown,
+    structuredFindings: asStructuredFindings(candidate.findings),
+    usedStructuredOutput: true,
+  };
+};
+
 const safeJsonPreview = (value: unknown): string => {
   try {
     const encoded = JSON.stringify(value);
@@ -225,7 +313,9 @@ export class OpenCodeReportRunner {
     this.options = options;
   }
 
-  public async generateReport(input: GenerateReportInput): Promise<string> {
+  public async generateReport(
+    input: GenerateReportInput
+  ): Promise<GenerateReportResult> {
     const sdk = (await import("@opencode-ai/sdk")) as OpenCodeModule;
     const opencode = await sdk.createOpencode({
       config: buildLockedConfig(this.options.model),
@@ -244,6 +334,44 @@ export class OpenCodeReportRunner {
 
       const response = await opencode.client.session.prompt({
         body: {
+          format: {
+            retryCount: 2,
+            schema: {
+              additionalProperties: false,
+              properties: {
+                findings: {
+                  items: {
+                    additionalProperties: false,
+                    properties: {
+                      comment: { type: "string" },
+                      id: { type: "string" },
+                      line: { minimum: 1, type: "integer" },
+                      path: { type: "string" },
+                      severity: {
+                        enum: ["low", "medium", "high", "critical"],
+                        type: "string",
+                      },
+                      title: { type: "string" },
+                    },
+                    required: [
+                      "id",
+                      "severity",
+                      "title",
+                      "path",
+                      "line",
+                      "comment",
+                    ],
+                    type: "object",
+                  },
+                  type: "array",
+                },
+                report_markdown: { type: "string" },
+              },
+              required: ["report_markdown", "findings"],
+              type: "object",
+            },
+            type: "json_schema",
+          },
           parts: [
             {
               text: OpenCodeReportRunner.buildPrompt(
@@ -263,11 +391,20 @@ export class OpenCodeReportRunner {
         throw new Error("OpenCode did not return a response payload.");
       }
 
+      const structuredReport = extractStructuredReport(response);
+      if (structuredReport) {
+        return structuredReport;
+      }
+
       const responseParts = extractResponseParts(response);
       if (responseParts.length === 0) {
         const responseText = extractResponseText(response);
         if (responseText) {
-          return responseText;
+          return {
+            reportMarkdown: responseText,
+            structuredFindings: [],
+            usedStructuredOutput: false,
+          };
         }
 
         throw new Error(
@@ -275,7 +412,11 @@ export class OpenCodeReportRunner {
         );
       }
 
-      return collectTextFromParts(responseParts);
+      return {
+        reportMarkdown: collectTextFromParts(responseParts),
+        structuredFindings: [],
+        usedStructuredOutput: false,
+      };
     } finally {
       opencode.server.close();
     }
@@ -293,9 +434,8 @@ export class OpenCodeReportRunner {
       "1. Executive Summary",
       "2. Findings",
       "3. Suggested Comment Actions",
-      "In the Findings section, include a JSON code block with this schema:",
-      '{"findings":[{"id":"string","severity":"low|medium|high|critical","title":"string","path":"string","line":1,"comment":"string"}]}.',
       "Use only findings with concrete path + line anchors.",
+      "The markdown report and findings are also validated by structured JSON schema output.",
       "",
       "## Instructions",
       instructionsMarkdown,

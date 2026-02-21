@@ -3,7 +3,10 @@ import type {
   GitHubReviewClient,
   PullRequestFile,
 } from "@octavio/github-review";
-import type { OpenCodeReportRunner } from "@octavio/opencode-runner";
+import type {
+  GenerateReportResult,
+  OpenCodeReportRunner,
+} from "@octavio/opencode-runner";
 
 type FindingSeverity = "low" | "medium" | "high" | "critical";
 type PolicyScope = "any" | "new" | "persisting" | "resolved";
@@ -25,6 +28,7 @@ export interface CodeReviewWorkflowConfig {
 
 export interface ReviewRunInput {
   instructionsMarkdown: string;
+  policyFailOnRules?: string[];
   previousFindings?: ReviewFinding[];
   repo: RepoRef;
 }
@@ -39,7 +43,7 @@ export interface PolicyEvaluation {
   failOnRules: string[];
   matchedRules: string[];
   shouldFail: boolean;
-  source: "frontmatter" | "fallback";
+  source: "config" | "frontmatter" | "fallback";
   warnings: string[];
 }
 
@@ -65,6 +69,12 @@ interface PolicyRule {
   raw: string;
   scope: PolicyScope;
   severity: FindingSeverity;
+}
+
+interface PolicyParseResult {
+  rules: PolicyRule[];
+  source: "config" | "frontmatter" | "fallback";
+  warnings: string[];
 }
 
 const VALID_SEVERITIES = new Set<FindingSeverity>([
@@ -152,6 +162,46 @@ const parseFindingsFromReport = (reportMarkdown: string): ReviewFinding[] => {
   }
 };
 
+const parseFindingsFromRunner = (
+  report: GenerateReportResult
+): ReviewFinding[] => {
+  if (report.usedStructuredOutput) {
+    const findings: ReviewFinding[] = [];
+
+    for (const finding of report.structuredFindings) {
+      const severity = normalizeSeverity(finding.severity);
+      if (
+        !severity ||
+        !finding.id ||
+        !finding.path ||
+        !Number.isInteger(finding.line) ||
+        finding.line <= 0
+      ) {
+        continue;
+      }
+
+      findings.push({
+        comment: finding.comment,
+        fingerprint: computeFingerprint({
+          line: finding.line,
+          path: finding.path,
+          severity,
+          title: finding.title,
+        }),
+        id: finding.id,
+        line: finding.line,
+        path: finding.path,
+        severity,
+        title: finding.title,
+      });
+    }
+
+    return findings;
+  }
+
+  return parseFindingsFromReport(report.reportMarkdown);
+};
+
 const compareFindings = (
   currentFindings: ReviewFinding[],
   previousFindings: ReviewFinding[]
@@ -189,13 +239,70 @@ const extractFrontmatter = (instructionsMarkdown: string): string | null => {
   return match[1]?.trim() ?? null;
 };
 
+const parseRawPolicyRules = (
+  rawRules: string[],
+  source: "config" | "frontmatter"
+): PolicyParseResult => {
+  const warnings: string[] = [];
+  const rules: PolicyRule[] = [];
+
+  for (const rawRuleCandidate of rawRules) {
+    const rawRule = rawRuleCandidate.trim().toLowerCase();
+    if (!rawRule) {
+      continue;
+    }
+
+    const [scope, severity] = rawRule.split(":");
+    const isValidScope =
+      scope === "any" ||
+      scope === "new" ||
+      scope === "persisting" ||
+      scope === "resolved";
+    const isValidSeverity = VALID_SEVERITIES.has(
+      (severity ?? "") as FindingSeverity
+    );
+
+    if (!isValidScope || !isValidSeverity) {
+      warnings.push(
+        `Ignoring unsupported policy rule '${rawRule}'. Supported format: <any|new|persisting|resolved>:<low|medium|high|critical>.`
+      );
+      continue;
+    }
+
+    rules.push({
+      raw: rawRule,
+      scope: scope as PolicyScope,
+      severity: severity as FindingSeverity,
+    });
+  }
+
+  return {
+    rules,
+    source,
+    warnings,
+  };
+};
+
 const parsePolicyRulesFromInstructions = (
-  instructionsMarkdown: string
-): {
-  rules: PolicyRule[];
-  source: "frontmatter" | "fallback";
-  warnings: string[];
-} => {
+  instructionsMarkdown: string,
+  configFailOnRules: string[] | undefined
+): PolicyParseResult => {
+  if (configFailOnRules) {
+    const parsedConfigRules = parseRawPolicyRules(configFailOnRules, "config");
+    if (parsedConfigRules.rules.length > 0) {
+      return parsedConfigRules;
+    }
+
+    return {
+      rules: [],
+      source: "fallback",
+      warnings: [
+        ...parsedConfigRules.warnings,
+        "Config policy.failOn did not include any valid rules; using fail-open fallback.",
+      ],
+    };
+  }
+
   const frontmatter = extractFrontmatter(instructionsMarkdown);
   if (!frontmatter) {
     return {
@@ -221,42 +328,14 @@ const parsePolicyRulesFromInstructions = (
     };
   }
 
-  const warnings: string[] = [];
-  const rules: PolicyRule[] = [];
-  const matches = failOnBlock[1].matchAll(/-\s*["']?([a-z]+:[a-z]+)["']?/gu);
-
-  for (const match of matches) {
-    const rawRule = match[1]?.trim().toLowerCase();
-    if (!rawRule) {
-      continue;
-    }
-
-    const [scope, severity] = rawRule.split(":");
-    const isValidScope =
-      scope === "any" ||
-      scope === "new" ||
-      scope === "persisting" ||
-      scope === "resolved";
-    const isValidSeverity = VALID_SEVERITIES.has(
-      (severity ?? "") as FindingSeverity
-    );
-
-    if (!isValidScope || !isValidSeverity) {
-      warnings.push(
-        `Ignoring unsupported policy rule '${rawRule}'. Supported format: <any|new|persisting|resolved>:<low|medium|high|critical>.`
-      );
-      continue;
-    }
-
-    const parsedScope = scope as PolicyScope;
-    const parsedSeverity = severity as FindingSeverity;
-
-    rules.push({
-      raw: rawRule,
-      scope: parsedScope,
-      severity: parsedSeverity,
-    });
-  }
+  const extractedRules = [
+    ...failOnBlock[1].matchAll(/-\s*["']?([a-z]+:[a-z]+)["']?/gu),
+  ]
+    .map((match) => match[1])
+    .filter(Boolean) as string[];
+  const parsedRules = parseRawPolicyRules(extractedRules, "frontmatter");
+  const { rules } = parsedRules;
+  const warnings = [...parsedRules.warnings];
 
   if (rules.length === 0) {
     warnings.push(
@@ -298,7 +377,7 @@ const findingsForScope = (
 
 const evaluatePolicy = (
   rules: PolicyRule[],
-  source: "frontmatter" | "fallback",
+  source: "config" | "frontmatter" | "fallback",
   warnings: string[],
   findings: ReviewFinding[],
   comparison: FindingsComparison
@@ -381,15 +460,16 @@ export class CodeReviewWorkflow {
       input.repo
     );
 
-    const reportMarkdown = await this.config.opencodeRunner.generateReport({
+    const report = await this.config.opencodeRunner.generateReport({
       contextMarkdown: formatPullRequestContext(pullRequest, files),
       instructionsMarkdown: input.instructionsMarkdown,
     });
 
-    const findings = parseFindingsFromReport(reportMarkdown);
+    const findings = parseFindingsFromRunner(report);
     const comparison = compareFindings(findings, input.previousFindings ?? []);
     const parsedPolicy = parsePolicyRulesFromInstructions(
-      input.instructionsMarkdown
+      input.instructionsMarkdown,
+      input.policyFailOnRules
     );
     const policy = evaluatePolicy(
       parsedPolicy.rules,
@@ -404,7 +484,7 @@ export class CodeReviewWorkflow {
       findings,
       hasBlockingFindings: policy.shouldFail,
       policy,
-      reportMarkdown,
+      reportMarkdown: report.reportMarkdown,
       summary: policy.shouldFail
         ? `Policy matched fail rules: ${policy.matchedRules.join(", ")}.`
         : "Policy did not match any fail rules.",
