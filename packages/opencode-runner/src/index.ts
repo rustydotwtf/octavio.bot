@@ -12,7 +12,7 @@ interface OpenCodeClient {
       body: { parts: [{ text: string; type: "text" }] };
       path: { id: string };
       query: { directory: string };
-    }): Promise<{ data?: { parts: Part[] } }>;
+    }): Promise<{ data?: unknown }>;
   };
 }
 
@@ -61,6 +61,52 @@ const collectTextFromParts = (parts: Part[]): string => {
     .filter((part) => part.length > 0);
 
   return textParts.join("\n\n");
+};
+
+const isPart = (value: unknown): value is Part => {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const candidate = value as Partial<Part>;
+  return typeof candidate.type === "string";
+};
+
+const asPartArray = (value: unknown): Part[] => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.filter((item) => isPart(item));
+};
+
+const extractResponseParts = (response: { data?: unknown }): Part[] => {
+  const data = response.data as
+    | {
+        parts?: unknown;
+        message?: { parts?: unknown };
+        data?: { parts?: unknown };
+      }
+    | undefined;
+
+  if (!data) {
+    return [];
+  }
+
+  const candidates = [
+    data.parts,
+    data.message?.parts,
+    data.data?.parts,
+  ] as const;
+
+  for (const candidate of candidates) {
+    const parts = asPartArray(candidate);
+    if (parts.length > 0) {
+      return parts;
+    }
+  }
+
+  return [];
 };
 
 const buildLockedConfig = (model: string): Config => ({
@@ -126,7 +172,14 @@ export class OpenCodeReportRunner {
         throw new Error("OpenCode did not return a response payload.");
       }
 
-      return collectTextFromParts(response.data.parts);
+      const responseParts = extractResponseParts(response);
+      if (responseParts.length === 0) {
+        throw new Error(
+          "OpenCode response did not include assistant message parts."
+        );
+      }
+
+      return collectTextFromParts(responseParts);
     } finally {
       opencode.server.close();
     }
