@@ -273,11 +273,6 @@ const run = async (): Promise<void> => {
   process.stdout.write(
     `Policy source: ${result.policy.source}; rules=${result.policy.failOnRules.join(", ") || "none"}; matched=${result.policy.matchedRules.join(", ") || "none"}\n`
   );
-  if (result.policy.warnings.length > 0) {
-    process.stdout.write(
-      `Policy warnings: ${result.policy.warnings.join(" | ")}\n`
-    );
-  }
   process.stdout.write(
     `Comparison: new=${result.comparison.newFindings.length} persisting=${result.comparison.persistingFindings.length} resolved=${result.comparison.resolvedFindings.length}\n`
   );

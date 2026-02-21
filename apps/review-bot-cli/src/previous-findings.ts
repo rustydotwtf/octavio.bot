@@ -34,14 +34,12 @@ const toReviewFinding = (value: unknown): ReviewFinding | null => {
 
   return {
     comment: candidate.comment,
-    fingerprint:
-      candidate.fingerprint ??
-      computeFingerprint({
-        line: candidate.line,
-        path: candidate.path,
-        severity: candidate.severity,
-        title: candidate.title,
-      }),
+    fingerprint: computeFingerprint({
+      line: candidate.line,
+      path: candidate.path,
+      severity: candidate.severity,
+      title: candidate.title,
+    }),
     id: candidate.id,
     line: candidate.line,
     path: candidate.path,
@@ -69,20 +67,7 @@ const extractFindingsFromConfidencePayload = (
 
 export const parsePreviousFindingsPayload = (
   payload: unknown
-): ReviewFinding[] => {
-  const confidenceFindings = extractFindingsFromConfidencePayload(payload);
-  if (confidenceFindings.length > 0) {
-    return confidenceFindings;
-  }
-
-  if (!Array.isArray(payload)) {
-    return [];
-  }
-
-  return payload
-    .map((item) => toReviewFinding(item))
-    .filter((item) => item !== null);
-};
+): ReviewFinding[] => extractFindingsFromConfidencePayload(payload);
 
 export const readPreviousFindings = async (
   previousFindingsPath: string | undefined

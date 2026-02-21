@@ -59,39 +59,40 @@ describe("parsePreviousFindingsPayload", () => {
     expect(parsed[0]?.fingerprint).toBe("src/file.ts|12|high|example title");
   });
 
-  it("parses legacy array payload findings", () => {
-    const parsed = parsePreviousFindingsPayload([
-      {
-        comment: "Legacy payload",
-        id: "F-2",
-        line: 42,
-        path: "packages/app/index.ts",
-        severity: "medium",
-        title: "Legacy finding",
-      },
-    ]);
+  it("recomputes canonical fingerprint from payload fields", () => {
+    const parsed = parsePreviousFindingsPayload({
+      findings: [
+        {
+          comment: "Precomputed",
+          fingerprint: "legacy-fingerprint",
+          id: "F-3",
+          line: 7,
+          path: "src/other.ts",
+          severity: "low",
+          title: "Existing fingerprint",
+        },
+      ],
+    });
 
     expect(parsed).toHaveLength(1);
     expect(parsed[0]?.fingerprint).toBe(
-      "packages/app/index.ts|42|medium|legacy finding"
+      "src/other.ts|7|low|existing fingerprint"
     );
   });
 
-  it("keeps existing fingerprint from payload", () => {
+  it("returns [] for unsupported payload shapes", () => {
     const parsed = parsePreviousFindingsPayload([
       {
-        comment: "Precomputed",
-        fingerprint: "legacy-fingerprint",
-        id: "F-3",
-        line: 7,
-        path: "src/other.ts",
+        comment: "Array payload is no longer supported",
+        id: "F-5",
+        line: 8,
+        path: "src/array.ts",
         severity: "low",
-        title: "Existing fingerprint",
+        title: "Array payload",
       },
     ]);
 
-    expect(parsed).toHaveLength(1);
-    expect(parsed[0]?.fingerprint).toBe("legacy-fingerprint");
+    expect(parsed).toEqual([]);
   });
 });
 

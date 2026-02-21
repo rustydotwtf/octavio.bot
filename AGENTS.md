@@ -26,6 +26,12 @@ Oxlint + Oxfmt (the underlying engine) provides robust linting and formatting. M
 
 Write code that is **accessible, performant, type-safe, and maintainable**. Focus on clarity and explicit intent over brevity.
 
+### Compatibility Posture
+
+- Do not add backward-compatibility paths, shims, aliases, dual-read logic, or legacy imports unless explicitly requested for a specific migration.
+- Prefer replacing old behavior outright instead of preserving multiple historical formats.
+- If an old path still exists, remove it and update callers/tests/docs in the same change.
+
 ### Type Safety & Explicitness
 
 - Use explicit types for function parameters and return values when they enhance clarity
@@ -171,5 +177,6 @@ This repository now uses a Bun workspace monorepo:
 - Profiles can define `artifactExecution` and `artifactSchema` (`artifactDir`, `reviewFile`, `confidenceFile`, `validatorCommand`, `maxAttempts`)
 - Profile prompt selection uses `instructionsPrompt` (`balanced|styling|security`)
 - Instruction resolution order: explicit `--instructions`, then profile prompt, then `defaultProfile`, then package default prompt (`balanced`)
-- Policy resolution order: profile `policy.failOn`, then instructions frontmatter `policy.fail_on`, then fail-open fallback
+- Policy resolution order: profile `policy.failOn`, then instructions frontmatter `policy.fail_on`
+- Policy mode is fail-closed: missing/empty/invalid policy configuration is an error
 - GitHub workflow runs a profile matrix (`balanced`, `styling`, `security`) with `max-parallel: 1`; each matrix job sets `OCTAVIO_INSTRUCTIONS_PROFILE` to the active profile

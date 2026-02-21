@@ -64,33 +64,56 @@ const createWorkflow = (
   });
 
 describe("policy parsing precedence", () => {
-  it("falls back when config failOn is empty", async () => {
+  it("fails when config failOn is empty", async () => {
     const workflow = createWorkflow("critical");
 
-    const result = await workflow.run({
-      artifactExecution: "agent",
-      artifactSchema: {
-        artifactDir: "artifacts",
-        confidenceFile: "confidence.json",
-        maxAttempts: 1,
-        reviewFile: "review.md",
-        validatorCommand: "bun run validate-artifacts --dir artifacts",
-      },
-      instructionsMarkdown: `---\npolicy:\n  fail_on:\n    - "any:critical"\n---\n`,
-      policyFailOnRules: [],
-      previousFindings: [],
-      repo: {
-        owner: "acme",
-        pullNumber: 1,
-        repo: "web",
-      },
-    });
+    await expect(
+      workflow.run({
+        artifactExecution: "agent",
+        artifactSchema: {
+          artifactDir: "artifacts",
+          confidenceFile: "confidence.json",
+          maxAttempts: 1,
+          reviewFile: "review.md",
+          validatorCommand: "bun run validate-artifacts --dir artifacts",
+        },
+        instructionsMarkdown: `---\npolicy:\n  fail_on:\n    - "any:critical"\n---\n`,
+        policyFailOnRules: [],
+        previousFindings: [],
+        repo: {
+          owner: "acme",
+          pullNumber: 1,
+          repo: "web",
+        },
+      })
+    ).rejects.toThrow(
+      "Config policy.failOn must include at least one valid rule."
+    );
+  });
 
-    expect(result.policy.source).toBe("fallback");
-    expect(result.policy.shouldFail).toBeFalse();
-    expect(result.policy.failOnRules).toEqual([]);
-    expect(result.policy.warnings).toContain(
-      "Config policy.failOn did not include any valid rules; using fail-open fallback."
+  it("fails when no config policy is set and frontmatter is missing", async () => {
+    const workflow = createWorkflow("critical");
+
+    await expect(
+      workflow.run({
+        artifactExecution: "agent",
+        artifactSchema: {
+          artifactDir: "artifacts",
+          confidenceFile: "confidence.json",
+          maxAttempts: 1,
+          reviewFile: "review.md",
+          validatorCommand: "bun run validate-artifacts --dir artifacts",
+        },
+        instructionsMarkdown: "# No policy",
+        previousFindings: [],
+        repo: {
+          owner: "acme",
+          pullNumber: 1,
+          repo: "web",
+        },
+      })
+    ).rejects.toThrow(
+      "Instructions must include frontmatter policy.fail_on when config policy.failOn is not set."
     );
   });
 
@@ -139,7 +162,8 @@ describe("policy parsing precedence", () => {
         reviewFile: "review.md",
         validatorCommand: "bun run validate-artifacts --dir artifacts",
       },
-      instructionsMarkdown: "# Test",
+      instructionsMarkdown:
+        '---\npolicy:\n  fail_on:\n    - "any:critical"\n---\n# Test',
       previousFindings: [],
       repo: {
         owner: "acme",
@@ -175,7 +199,8 @@ describe("policy parsing precedence", () => {
         reviewFile: "review.md",
         validatorCommand: "bun run validate-artifacts --dir artifacts",
       },
-      instructionsMarkdown: "# Test",
+      instructionsMarkdown:
+        '---\npolicy:\n  fail_on:\n    - "any:critical"\n---\n# Test',
       previousFindings: [],
       repo: {
         owner: "acme",
@@ -208,7 +233,8 @@ describe("policy parsing precedence", () => {
         reviewFile: "review.md",
         validatorCommand: "bun run validate-artifacts --dir artifacts",
       },
-      instructionsMarkdown: "# Test",
+      instructionsMarkdown:
+        '---\npolicy:\n  fail_on:\n    - "any:critical"\n---\n# Test',
       previousFindings: [],
       repo: {
         owner: "acme",

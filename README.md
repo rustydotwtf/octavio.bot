@@ -61,7 +61,6 @@ Policy resolution order:
 
 1. profile policy from `.octavio/review.config.json` (`policy.failOn`)
 2. instruction frontmatter policy (`policy.fail_on`)
-3. fail-open fallback
 
 ### Optional review config
 
@@ -108,7 +107,7 @@ Policy can be set either in profile config (`policy.failOn`) or in YAML frontmat
 `policy.failOn` semantics:
 
 - Omitted (`undefined`): evaluate frontmatter `policy.fail_on`.
-- Provided but empty (`[]`) or invalid: treat config as selected, then fail-open with warnings.
+- Provided but empty (`[]`) or invalid: error (fail-closed).
 
 Frontmatter example:
 
@@ -125,7 +124,7 @@ Supported scope: `any`, `new`, `persisting`, `resolved`.
 
 When both are present, profile config wins.
 
-If policy is missing or invalid, the runner uses fail-open fallback and reports warnings in `result.json`.
+If policy is missing or invalid, the runner errors (fail-closed).
 
 ## Artifact Schema
 

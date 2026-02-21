@@ -47,8 +47,7 @@ export interface PolicyEvaluation {
   failOnRules: string[];
   matchedRules: string[];
   shouldFail: boolean;
-  source: "config" | "frontmatter" | "fallback";
-  warnings: string[];
+  source: "config" | "frontmatter";
 }
 
 export interface ReviewRunResult {
@@ -78,8 +77,7 @@ interface PolicyRule {
 
 interface PolicyParseResult {
   rules: PolicyRule[];
-  source: "config" | "frontmatter" | "fallback";
-  warnings: string[];
+  source: "config" | "frontmatter";
 }
 
 const VALID_SEVERITIES = new Set<FindingSeverity>([
@@ -252,8 +250,8 @@ const parseRawPolicyRules = (
   rawRules: string[],
   source: "config" | "frontmatter"
 ): PolicyParseResult => {
-  const warnings: string[] = [];
   const rules: PolicyRule[] = [];
+  const invalidRules: string[] = [];
 
   for (const rawRuleCandidate of rawRules) {
     const rawRule = rawRuleCandidate.trim().toLowerCase();
@@ -272,9 +270,7 @@ const parseRawPolicyRules = (
     );
 
     if (!isValidScope || !isValidSeverity) {
-      warnings.push(
-        `Ignoring unsupported policy rule '${rawRule}'. Supported format: <any|new|persisting|resolved>:<low|medium|high|critical>.`
-      );
+      invalidRules.push(rawRule);
       continue;
     }
 
@@ -285,10 +281,21 @@ const parseRawPolicyRules = (
     });
   }
 
+  if (invalidRules.length > 0) {
+    throw new Error(
+      `Invalid ${source === "config" ? "config policy.failOn" : "instructions policy.fail_on"} rules: ${invalidRules.join(", ")}. Supported format: <any|new|persisting|resolved>:<low|medium|high|critical>.`
+    );
+  }
+
+  if (rules.length === 0) {
+    throw new Error(
+      `${source === "config" ? "Config policy.failOn" : "Instructions policy.fail_on"} must include at least one valid rule.`
+    );
+  }
+
   return {
     rules,
     source,
-    warnings,
   };
 };
 
@@ -296,31 +303,15 @@ const parsePolicyRulesFromInstructions = (
   instructionsMarkdown: string,
   configFailOnRules: string[] | undefined
 ): PolicyParseResult => {
-  if (configFailOnRules) {
-    const parsedConfigRules = parseRawPolicyRules(configFailOnRules, "config");
-    if (parsedConfigRules.rules.length > 0) {
-      return parsedConfigRules;
-    }
-
-    return {
-      rules: [],
-      source: "fallback",
-      warnings: [
-        ...parsedConfigRules.warnings,
-        "Config policy.failOn did not include any valid rules; using fail-open fallback.",
-      ],
-    };
+  if (configFailOnRules !== undefined) {
+    return parseRawPolicyRules(configFailOnRules, "config");
   }
 
   const frontmatter = extractFrontmatter(instructionsMarkdown);
   if (!frontmatter) {
-    return {
-      rules: [],
-      source: "fallback",
-      warnings: [
-        "No policy frontmatter was found in instructions; using fail-open fallback.",
-      ],
-    };
+    throw new Error(
+      "Instructions must include frontmatter policy.fail_on when config policy.failOn is not set."
+    );
   }
 
   const failOnBlock = frontmatter.match(
@@ -328,13 +319,9 @@ const parsePolicyRulesFromInstructions = (
   );
 
   if (!failOnBlock?.[1]) {
-    return {
-      rules: [],
-      source: "fallback",
-      warnings: [
-        "Instructions frontmatter is present but policy.fail_on is missing; using fail-open fallback.",
-      ],
-    };
+    throw new Error(
+      "Instructions frontmatter must include policy.fail_on when config policy.failOn is not set."
+    );
   }
 
   const extractedRules = [
@@ -342,26 +329,8 @@ const parsePolicyRulesFromInstructions = (
   ]
     .map((match) => match[1])
     .filter(Boolean) as string[];
-  const parsedRules = parseRawPolicyRules(extractedRules, "frontmatter");
-  const { rules } = parsedRules;
-  const warnings = [...parsedRules.warnings];
 
-  if (rules.length === 0) {
-    warnings.push(
-      "No valid policy rules were found in policy.fail_on; using fail-open fallback."
-    );
-    return {
-      rules: [],
-      source: "fallback",
-      warnings,
-    };
-  }
-
-  return {
-    rules,
-    source: "frontmatter",
-    warnings,
-  };
+  return parseRawPolicyRules(extractedRules, "frontmatter");
 };
 
 const findingsForScope = (
@@ -386,21 +355,10 @@ const findingsForScope = (
 
 const evaluatePolicy = (
   rules: PolicyRule[],
-  source: "config" | "frontmatter" | "fallback",
-  warnings: string[],
+  source: "config" | "frontmatter",
   findings: ReviewFinding[],
   comparison: FindingsComparison
 ): PolicyEvaluation => {
-  if (rules.length === 0) {
-    return {
-      failOnRules: [],
-      matchedRules: [],
-      shouldFail: false,
-      source,
-      warnings,
-    };
-  }
-
   const matchedRules: string[] = [];
   for (const rule of rules) {
     const scopedFindings = findingsForScope(comparison, findings, rule.scope);
@@ -417,7 +375,6 @@ const evaluatePolicy = (
     matchedRules,
     shouldFail: matchedRules.length > 0,
     source,
-    warnings,
   };
 };
 
@@ -503,7 +460,6 @@ export class CodeReviewWorkflow {
     const policy = evaluatePolicy(
       parsedPolicy.rules,
       parsedPolicy.source,
-      parsedPolicy.warnings,
       findings,
       comparison
     );
