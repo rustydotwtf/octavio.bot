@@ -5,6 +5,7 @@
   "dependencies": {
     "@octavio/agent-code-review": "workspace:*",
     "@octavio/config": "workspace:*",
-    "@octavio/github-review": "workspace:*"
+    "@octavio/github-review": "workspace:*",
+    "@octavio/opencode-runner": "workspace:*"
   }
 }

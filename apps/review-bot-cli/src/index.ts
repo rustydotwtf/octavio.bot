@@ -1,12 +1,16 @@
 import { CodeReviewWorkflow } from "@octavio/agent-code-review";
 import type { ReviewFinding } from "@octavio/agent-code-review";
+import type {
+  ArtifactExecution,
+  CliInput,
+  ReviewConfig,
+} from "@octavio/config";
 import {
   loadReviewConfig,
   loadRuntimeEnv,
   resolvePathFromWorkspace,
   resolveWorkspaceDirectory,
 } from "@octavio/config";
-import type { CliInput, ReviewConfig } from "@octavio/config";
 import { GitHubReviewClient } from "@octavio/github-review";
 import { OpenCodeReportRunner } from "@octavio/opencode-runner";
 
@@ -14,10 +18,56 @@ const DEFAULT_INSTRUCTIONS_PATH = "prompts/code-review.md";
 const REPORT_LOG_MAX_CHARS = 8000;
 
 interface ResolvedInstructions {
+  artifactExecution: ArtifactExecution;
+  artifactSchema: {
+    artifactDir: string;
+    confidenceFile: string;
+    maxAttempts: number;
+    reviewFile: string;
+    validatorCommand: string;
+  };
   instructionsPath: string;
   policyFailOnRules?: string[];
   profileName?: string;
 }
+
+const DEFAULT_ARTIFACT_DIR = "artifacts";
+const DEFAULT_REVIEW_FILE = "review.md";
+const DEFAULT_CONFIDENCE_FILE = "confidence.json";
+const DEFAULT_ARTIFACT_MAX_ATTEMPTS = 2;
+const DEFAULT_ARTIFACT_EXECUTION: ArtifactExecution = "agent";
+
+const parseArtifactExecution = (
+  rawValue: string | undefined
+): ArtifactExecution | undefined => {
+  if (!rawValue) {
+    return undefined;
+  }
+
+  return rawValue === "host" ? "host" : "agent";
+};
+
+const resolveArtifactSchema = (
+  selectedProfile: ReviewConfig["profiles"][string] | undefined
+): ResolvedInstructions["artifactSchema"] => {
+  const artifactDir =
+    selectedProfile?.artifactSchema?.artifactDir ?? DEFAULT_ARTIFACT_DIR;
+
+  return {
+    artifactDir,
+    confidenceFile:
+      selectedProfile?.artifactSchema?.confidenceFile ??
+      DEFAULT_CONFIDENCE_FILE,
+    maxAttempts:
+      selectedProfile?.artifactSchema?.maxAttempts ??
+      DEFAULT_ARTIFACT_MAX_ATTEMPTS,
+    reviewFile:
+      selectedProfile?.artifactSchema?.reviewFile ?? DEFAULT_REVIEW_FILE,
+    validatorCommand:
+      selectedProfile?.artifactSchema?.validatorCommand ??
+      `bun run validate-artifacts --dir ${artifactDir}`,
+  };
+};
 
 const parseArgs = (argv: string[]): CliInput => {
   const flags = new Map<string, string>();
@@ -28,7 +78,7 @@ const parseArgs = (argv: string[]): CliInput => {
 
     if (!key?.startsWith("--") || !value) {
       throw new Error(
-        "Invalid arguments. Expected --owner --repo --pr [--instructions] [--instructions-profile] [--workdir] [--report-output] [--findings-output] [--result-output] [--previous-findings]."
+        "Invalid arguments. Expected --owner --repo --pr [--instructions] [--instructions-profile] [--artifact-execution] [--workdir] [--report-output] [--findings-output] [--result-output] [--previous-findings]."
       );
     }
 
@@ -45,11 +95,12 @@ const parseArgs = (argv: string[]): CliInput => {
 
   if (!owner || !repo || Number.isNaN(pullNumber)) {
     throw new Error(
-      "Missing required args. Example: --owner acme --repo web --pr 123 [--instructions prompts/code-review.md] [--instructions-profile balanced]"
+      "Missing required args. Example: --owner acme --repo web --pr 123 [--instructions prompts/code-review.md] [--instructions-profile balanced] [--artifact-execution agent]"
     );
   }
 
   return {
+    artifactExecution: parseArtifactExecution(flags.get("artifact-execution")),
     findingsOutputPath: flags.get("findings-output"),
     instructionsPath,
     instructionsProfile: flags.get("instructions-profile"),
@@ -97,20 +148,15 @@ const resolveInstructions = (
   }
 
   return {
+    artifactExecution:
+      cliInput.artifactExecution ??
+      selectedProfile?.artifactExecution ??
+      DEFAULT_ARTIFACT_EXECUTION,
+    artifactSchema: resolveArtifactSchema(selectedProfile),
     instructionsPath: resolvedPath,
     policyFailOnRules: selectedProfile?.policy?.failOn,
     profileName: selectedProfileName,
   };
-};
-
-const defaultReportPath = (pullNumber: number): string => {
-  const timestamp = new Date().toISOString().replaceAll(/[:.]/gu, "-");
-  return `report-pr-${pullNumber}-${timestamp}.md`;
-};
-
-const defaultFindingsPath = (pullNumber: number): string => {
-  const timestamp = new Date().toISOString().replaceAll(/[:.]/gu, "-");
-  return `findings-pr-${pullNumber}-${timestamp}.json`;
 };
 
 const defaultResultPath = (pullNumber: number): string => {
@@ -123,23 +169,71 @@ const truncateForLogs = (value: string): string =>
     ? `${value.slice(0, REPORT_LOG_MAX_CHARS)}\n...truncated...`
     : value;
 
-const isReviewFinding = (value: unknown): value is ReviewFinding => {
+const computeFingerprint = (finding: {
+  line: number;
+  path: string;
+  severity: string;
+  title: string;
+}): string =>
+  [
+    finding.path.trim().toLowerCase(),
+    String(finding.line),
+    finding.severity.trim().toLowerCase(),
+    finding.title.trim().toLowerCase(),
+  ].join("|");
+
+const toReviewFinding = (value: unknown): ReviewFinding | null => {
   if (!value || typeof value !== "object") {
-    return false;
+    return null;
   }
 
   const candidate = value as Partial<ReviewFinding>;
-  return (
-    typeof candidate.comment === "string" &&
-    typeof candidate.fingerprint === "string" &&
-    typeof candidate.id === "string" &&
-    typeof candidate.line === "number" &&
-    Number.isInteger(candidate.line) &&
-    candidate.line > 0 &&
-    typeof candidate.path === "string" &&
-    typeof candidate.severity === "string" &&
-    typeof candidate.title === "string"
-  );
+  if (
+    typeof candidate.comment !== "string" ||
+    typeof candidate.id !== "string" ||
+    typeof candidate.line !== "number" ||
+    !Number.isInteger(candidate.line) ||
+    candidate.line <= 0 ||
+    typeof candidate.path !== "string" ||
+    typeof candidate.severity !== "string" ||
+    typeof candidate.title !== "string"
+  ) {
+    return null;
+  }
+
+  return {
+    comment: candidate.comment,
+    fingerprint:
+      candidate.fingerprint ??
+      computeFingerprint({
+        line: candidate.line,
+        path: candidate.path,
+        severity: candidate.severity,
+        title: candidate.title,
+      }),
+    id: candidate.id,
+    line: candidate.line,
+    path: candidate.path,
+    severity: candidate.severity,
+    title: candidate.title,
+  };
+};
+
+const extractFindingsFromConfidencePayload = (
+  payload: unknown
+): ReviewFinding[] => {
+  if (!payload || typeof payload !== "object") {
+    return [];
+  }
+
+  const maybeFindings = (payload as { findings?: unknown }).findings;
+  if (!Array.isArray(maybeFindings)) {
+    return [];
+  }
+
+  return maybeFindings
+    .map((item) => toReviewFinding(item))
+    .filter((item) => item !== null);
 };
 
 const readPreviousFindings = async (
@@ -155,11 +249,18 @@ const readPreviousFindings = async (
   }
 
   const parsed = (await file.json()) as unknown;
+  const confidenceFindings = extractFindingsFromConfidencePayload(parsed);
+  if (confidenceFindings.length > 0) {
+    return confidenceFindings;
+  }
+
   if (!Array.isArray(parsed)) {
     return [];
   }
 
-  return parsed.filter((item) => isReviewFinding(item));
+  return parsed
+    .map((item) => toReviewFinding(item))
+    .filter((item) => item !== null);
 };
 
 const run = async (): Promise<void> => {
@@ -196,6 +297,8 @@ const run = async (): Promise<void> => {
   );
 
   const result = await workflow.run({
+    artifactExecution: resolvedInstructions.artifactExecution,
+    artifactSchema: resolvedInstructions.artifactSchema,
     instructionsMarkdown,
     policyFailOnRules: resolvedInstructions.policyFailOnRules,
     previousFindings,
@@ -213,15 +316,14 @@ const run = async (): Promise<void> => {
   process.stdout.write("----- END REPORT -----\n");
 
   const reportPath =
-    cliInput.reportOutputPath ?? defaultReportPath(cliInput.pullNumber);
+    cliInput.reportOutputPath ??
+    `${resolvedInstructions.artifactSchema.artifactDir}/${resolvedInstructions.artifactSchema.reviewFile}`;
   await Bun.write(reportPath, result.reportMarkdown);
 
   const findingsPath =
-    cliInput.findingsOutputPath ?? defaultFindingsPath(cliInput.pullNumber);
-  await Bun.write(
-    findingsPath,
-    `${JSON.stringify(result.findings, null, 2)}\n`
-  );
+    cliInput.findingsOutputPath ??
+    `${resolvedInstructions.artifactSchema.artifactDir}/${resolvedInstructions.artifactSchema.confidenceFile}`;
+  await Bun.write(findingsPath, `${result.confidenceJson.trim()}\n`);
 
   const resultPath =
     cliInput.resultOutputPath ?? defaultResultPath(cliInput.pullNumber);

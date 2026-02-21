@@ -4,6 +4,8 @@ import type {
   PullRequestFile,
 } from "@octavio/github-review";
 import type {
+  ArtifactExecution,
+  ArtifactSchemaConfig,
   GenerateReportResult,
   OpenCodeReportRunner,
 } from "@octavio/opencode-runner";
@@ -27,6 +29,8 @@ export interface CodeReviewWorkflowConfig {
 }
 
 export interface ReviewRunInput {
+  artifactExecution: ArtifactExecution;
+  artifactSchema: ArtifactSchemaConfig;
   instructionsMarkdown: string;
   policyFailOnRules?: string[];
   previousFindings?: ReviewFinding[];
@@ -49,6 +53,7 @@ export interface PolicyEvaluation {
 
 export interface ReviewRunResult {
   comparison: FindingsComparison;
+  confidenceJson: string;
   hasBlockingFindings: boolean;
   findings: ReviewFinding[];
   policy: PolicyEvaluation;
@@ -473,6 +478,8 @@ export class CodeReviewWorkflow {
 
     writeWorkflowLog("sending PR context to OpenCode");
     const report = await this.config.opencodeRunner.generateReport({
+      artifactExecution: input.artifactExecution,
+      artifactSchema: input.artifactSchema,
       contextMarkdown: formatPullRequestContext(pullRequest, files),
       instructionsMarkdown: input.instructionsMarkdown,
     });
@@ -497,6 +504,7 @@ export class CodeReviewWorkflow {
 
     return {
       comparison,
+      confidenceJson: report.confidenceJson,
       findings,
       hasBlockingFindings: policy.shouldFail,
       policy,

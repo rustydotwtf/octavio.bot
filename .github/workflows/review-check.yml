@@ -60,7 +60,7 @@ jobs:
               return
             }
 
-            const artifactName = `octavio-findings-pr-${context.payload.pull_request.number}`
+            const artifactName = `octavio-confidence-pr-${context.payload.pull_request.number}`
             const { owner, repo } = context.repo
 
             const runs = await github.paginate(
@@ -126,8 +126,8 @@ jobs:
           mkdir -p artifacts
           PREVIOUS_ARGS=""
           PROFILE_ARGS=""
-          if [ -f ".previous-findings/findings.json" ]; then
-            PREVIOUS_ARGS="--previous-findings .previous-findings/findings.json"
+          if [ -f ".previous-findings/confidence.json" ]; then
+            PREVIOUS_ARGS="--previous-findings .previous-findings/confidence.json"
           fi
           if [ -n "$OCTAVIO_INSTRUCTIONS_PROFILE" ]; then
             PROFILE_ARGS="--instructions-profile $OCTAVIO_INSTRUCTIONS_PROFILE"
@@ -138,8 +138,8 @@ jobs:
             --pr "${{ github.event.pull_request.number }}" \
             $PROFILE_ARGS \
             --workdir . \
-            --report-output artifacts/report.md \
-            --findings-output artifacts/findings.json \
+            --report-output artifacts/review.md \
+            --findings-output artifacts/confidence.json \
             --result-output artifacts/result.json \
             $PREVIOUS_ARGS
 
@@ -175,15 +175,15 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: octavio-review-report-pr-${{ github.event.pull_request.number }}
-          path: artifacts/report.md
+          path: artifacts/review.md
           if-no-files-found: ignore
 
-      - name: Upload findings artifact
+      - name: Upload confidence artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: octavio-findings-pr-${{ github.event.pull_request.number }}
-          path: artifacts/findings.json
+          name: octavio-confidence-pr-${{ github.event.pull_request.number }}
+          path: artifacts/confidence.json
           if-no-files-found: ignore
 
       - name: Upload result artifact

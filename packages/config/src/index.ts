@@ -16,6 +16,7 @@ export interface RepoRef {
 }
 
 export interface CliInput extends RepoRef {
+  artifactExecution?: ArtifactExecution;
   findingsOutputPath?: string;
   instructionsPath?: string;
   instructionsProfile?: string;
@@ -28,7 +29,23 @@ export interface CliInput extends RepoRef {
 const POLICY_RULE_REGEX =
   /^(any|new|persisting|resolved):(low|medium|high|critical)$/u;
 
+const artifactExecutionSchema = z.enum(["host", "agent"]);
+
+export type ArtifactExecution = z.infer<typeof artifactExecutionSchema>;
+
+const artifactSchemaConfigSchema = z
+  .object({
+    artifactDir: z.string().min(1).optional(),
+    confidenceFile: z.string().min(1).optional(),
+    maxAttempts: z.coerce.number().int().min(1).max(6).optional(),
+    reviewFile: z.string().min(1).optional(),
+    validatorCommand: z.string().min(1).optional(),
+  })
+  .optional();
+
 const reviewProfileSchema = z.object({
+  artifactExecution: artifactExecutionSchema.optional(),
+  artifactSchema: artifactSchemaConfigSchema,
   instructionsPath: z.string().min(1),
   policy: z
     .object({
