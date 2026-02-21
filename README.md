@@ -99,6 +99,11 @@ Create `.octavio/review.config.json` to manage instruction profiles and policy o
 
 Policy can be set either in profile config (`policy.failOn`) or in YAML frontmatter in instructions (`policy.fail_on`).
 
+`policy.failOn` semantics:
+
+- Omitted (`undefined`): evaluate frontmatter `policy.fail_on`.
+- Provided but empty (`[]`) or invalid: treat config as selected, then fail-open with warnings.
+
 Frontmatter example:
 
 ```yaml
