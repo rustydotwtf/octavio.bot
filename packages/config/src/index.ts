@@ -38,7 +38,6 @@ const artifactSchemaConfigSchema = z
     confidenceFile: z.string().min(1).optional(),
     maxAttempts: z.coerce.number().int().min(1).max(6).optional(),
     reviewFile: z.string().min(1).optional(),
-    validatorCommand: z.string().min(1).optional(),
   })
   .optional();
 

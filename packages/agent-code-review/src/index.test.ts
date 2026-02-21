@@ -76,7 +76,6 @@ describe("policy parsing precedence", () => {
           confidenceFile: "confidence.json",
           maxAttempts: 1,
           reviewFile: "review.md",
-          validatorCommand: "bun run validate-artifacts --dir artifacts",
         },
         instructionsMarkdown: `---\npolicy:\n  fail_on:\n    - "any:critical"\n---\n`,
         policyFailOnRules: [],
@@ -102,7 +101,6 @@ describe("policy parsing precedence", () => {
           confidenceFile: "confidence.json",
           maxAttempts: 1,
           reviewFile: "review.md",
-          validatorCommand: "bun run validate-artifacts --dir artifacts",
         },
         instructionsMarkdown: "# No policy",
         repo: {
@@ -127,7 +125,6 @@ describe("policy parsing precedence", () => {
           confidenceFile: "confidence.json",
           maxAttempts: 1,
           reviewFile: "review.md",
-          validatorCommand: "bun run validate-artifacts --dir artifacts",
         },
         instructionsMarkdown:
           '---\npolicy:\n  fail_on:\n    - "invalid:rule"\n---\n# Test',
@@ -150,7 +147,6 @@ describe("policy parsing precedence", () => {
         confidenceFile: "confidence.json",
         maxAttempts: 1,
         reviewFile: "review.md",
-        validatorCommand: "bun run validate-artifacts --dir artifacts",
       },
       instructionsMarkdown: `---\npolicy:\n  fail_on:\n    - "any:critical"\n---\n`,
       repo: {
@@ -178,7 +174,6 @@ describe("policy parsing precedence", () => {
           confidenceFile: "confidence.json",
           maxAttempts: 1,
           reviewFile: "review.md",
-          validatorCommand: "bun run validate-artifacts --dir artifacts",
         },
         instructionsMarkdown: `---\npolicy:\n  fail_on:\n    - "any:critical"\n---\n`,
         repo: {
@@ -207,7 +202,6 @@ describe("policy parsing precedence", () => {
         confidenceFile: "confidence.json",
         maxAttempts: 1,
         reviewFile: "review.md",
-        validatorCommand: "bun run validate-artifacts --dir artifacts",
       },
       instructionsMarkdown:
         '---\npolicy:\n  fail_on:\n    - "any:critical"\n---\n# Test',
@@ -243,7 +237,6 @@ describe("policy parsing precedence", () => {
         confidenceFile: "confidence.json",
         maxAttempts: 1,
         reviewFile: "review.md",
-        validatorCommand: "bun run validate-artifacts --dir artifacts",
       },
       instructionsMarkdown:
         '---\npolicy:\n  fail_on:\n    - "any:critical"\n---\n# Test',
@@ -276,7 +269,6 @@ describe("policy parsing precedence", () => {
         confidenceFile: "confidence.json",
         maxAttempts: 1,
         reviewFile: "review.md",
-        validatorCommand: "bun run validate-artifacts --dir artifacts",
       },
       instructionsMarkdown:
         '---\npolicy:\n  fail_on:\n    - "any:critical"\n---\n# Test',

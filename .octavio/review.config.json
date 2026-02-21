@@ -7,8 +7,7 @@
         "artifactDir": "artifacts",
         "confidenceFile": "confidence.json",
         "maxAttempts": 2,
-        "reviewFile": "review.md",
-        "validatorCommand": "bun run validate-artifacts --dir artifacts"
+        "reviewFile": "review.md"
       },
       "instructionsPrompt": "balanced",
       "policy": {
@@ -21,8 +20,7 @@
         "artifactDir": "artifacts",
         "confidenceFile": "confidence.json",
         "maxAttempts": 2,
-        "reviewFile": "review.md",
-        "validatorCommand": "bun run validate-artifacts --dir artifacts"
+        "reviewFile": "review.md"
       },
       "instructionsPrompt": "styling",
       "policy": {
@@ -35,8 +33,7 @@
         "artifactDir": "artifacts",
         "confidenceFile": "confidence.json",
         "maxAttempts": 2,
-        "reviewFile": "review.md",
-        "validatorCommand": "bun run validate-artifacts --dir artifacts"
+        "reviewFile": "review.md"
       },
       "instructionsPrompt": "security",
       "policy": {

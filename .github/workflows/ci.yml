@@ -36,3 +36,14 @@ jobs:
           else
             echo "No test files found; skipping tests."
           fi
+
+  published-cli-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Smoke test published CLI
+        run: bunx --bun @octavio.bot/review@latest doctor

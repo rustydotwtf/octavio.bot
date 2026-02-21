@@ -1,12 +1,34 @@
 {
-  "name": "@octavio.bot/review-bot-cli",
-  "private": true,
+  "name": "@octavio.bot/review",
+  "version": "0.1.3",
+  "private": false,
+  "description": "CLI for OpenCode-powered pull request review checks",
+  "homepage": "https://github.com/rustydotwtf/octavio.bot/tree/main/apps/review-bot-cli",
+  "bugs": {
+    "url": "https://github.com/rustydotwtf/octavio.bot/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rustydotwtf/octavio.bot.git",
+    "directory": "apps/review-bot-cli"
+  },
+  "bin": {
+    "octavio-review": "./dist/index.mjs"
+  },
+  "files": [
+    "dist",
+    "prompts"
+  ],
   "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "bun build ./src/index.ts --outfile ./dist/index.mjs --target bun --banner '#!/usr/bin/env bun' && chmod +x ./dist/index.mjs && rm -rf ./prompts && mkdir -p ./prompts && cp ../../packages/prompts/prompts/*.md ./prompts/",
+    "prepack": "bun run build"
+  },
   "dependencies": {
-    "@octavio.bot/agent-code-review": "workspace:*",
-    "@octavio.bot/config": "workspace:*",
-    "@octavio.bot/github-review": "workspace:*",
-    "@octavio.bot/opencode-runner": "workspace:*",
-    "@octavio.bot/prompts": "workspace:*"
+    "@opencode-ai/sdk": "^1.2.10",
+    "zod": "^4.1.12"
   }
 }

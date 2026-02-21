@@ -57,7 +57,6 @@ export interface ArtifactSchemaConfig {
   confidenceFile: string;
   maxAttempts: number;
   reviewFile: string;
-  validatorCommand: string;
 }
 
 export interface OpenCodeRunnerOptions {
@@ -198,7 +197,6 @@ const buildBashPermission = (
 
   return {
     "*": "deny",
-    "bun run validate-artifacts*": "allow",
     "git diff*": "allow",
     "git log*": "allow",
     "git show*": "allow",
@@ -289,31 +287,6 @@ const parseFindingsFromConfidence = (value: unknown): ReportFinding[] => {
 
 const pathFromWorkspace = (workspace: string, filePath: string): string =>
   `${workspace.replace(/\/$/u, "")}/${filePath.replace(/^\//u, "")}`;
-
-const readProcessStream = async (
-  stream: ReadableStream<Uint8Array> | null
-): Promise<string> => (stream ? await new Response(stream).text() : "");
-
-const runValidatorCommand = async (
-  command: string,
-  workspaceDirectory: string
-): Promise<{ ok: boolean; output: string }> => {
-  const subprocess = Bun.spawn(["bash", "-lc", command], {
-    cwd: workspaceDirectory,
-    stderr: "pipe",
-    stdout: "pipe",
-  });
-  const [exitCode, stderr, stdout] = await Promise.all([
-    subprocess.exited,
-    readProcessStream(subprocess.stderr),
-    readProcessStream(subprocess.stdout),
-  ]);
-
-  const output = [stdout.trim(), stderr.trim()]
-    .filter((entry) => entry.length > 0)
-    .join("\n");
-  return { ok: exitCode === 0, output };
-};
 
 const validateArtifactsFromDisk = async (
   workspaceDirectory: string,
@@ -434,18 +407,6 @@ export class OpenCodeReportRunner {
         });
         writeRunnerLog(`assistant response preview: ${preview(response.data)}`);
 
-        const validatorResult = await runValidatorCommand(
-          input.artifactSchema.validatorCommand,
-          this.options.workspaceDirectory
-        );
-        if (!validatorResult.ok) {
-          validationErrors =
-            validatorResult.output ||
-            "Validator command failed without output.";
-          writeRunnerLog(`artifact validation failed: ${validationErrors}`);
-          continue;
-        }
-
         try {
           const artifacts = await validateArtifactsFromDisk(
             this.options.workspaceDirectory,
@@ -492,7 +453,7 @@ export class OpenCodeReportRunner {
       `Required JSON report: ${artifactSchema.artifactDir}/${artifactSchema.confidenceFile}`,
       "JSON must include: summary (string), overallConfidence (low|medium|high), findings (array), meta (object).",
       "Each finding must include: id, severity (low|medium|high|critical), title, path, line (>0 int), comment.",
-      `Validator command: ${artifactSchema.validatorCommand}`,
+      "The host process will validate these artifacts after each attempt.",
       "",
       "## Instructions",
       instructionsMarkdown,
@@ -510,7 +471,7 @@ export class OpenCodeReportRunner {
       "Artifacts failed validation. Fix files and re-run validator.",
       `Artifact directory: ${artifactSchema.artifactDir}`,
       `Required files: ${artifactSchema.artifactDir}/${artifactSchema.reviewFile}, ${artifactSchema.artifactDir}/${artifactSchema.confidenceFile}`,
-      `Validator command: ${artifactSchema.validatorCommand}`,
+      "The host process validates these files after each attempt.",
       "",
       "Validation errors:",
       validationErrors,

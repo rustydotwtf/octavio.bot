@@ -176,7 +176,7 @@ Most formatting and common issues are automatically fixed by Oxlint + Oxfmt. Run
 
 This repository now uses a Bun workspace monorepo:
 
-- `apps/review-bot-cli` - executable CLI for the review workflow
+- `apps/review-bot-cli` - publishable CLI package (`@octavio.bot/review`, binary `octavio-review`)
 - `packages/config` - runtime env and CLI config parsing
 - `packages/opencode-runner` - OpenCode SDK wrapper for artifact-schema generation and validation retries
 - `packages/github-review` - GitHub REST helpers for PR metadata and changed files
@@ -185,19 +185,25 @@ This repository now uses a Bun workspace monorepo:
 
 Notes:
 
-- Package directories may be created for experimentation before implementation. If a package is empty or unused, remove it instead of keeping placeholders.
+- `packages/*` is the canonical workspace package boundary. Do not keep placeholder package directories.
+- Every package directory must contain a tracked `package.json` and source files. If a package is empty or unused, delete the directory.
+- App-specific contributor guidance should live in per-app `AGENTS.md` files (for example `apps/review-bot-cli/AGENTS.md`).
 
 ### Common Commands
 
-- Run bot: `bun run review-bot --owner <owner> --repo <repo> --pr <number> [--instructions /absolute/or/workspace/path.md] [--instructions-profile <name>] [--artifact-execution agent|host] --workdir .`
-- Validate artifacts: `bun run validate-artifacts --dir artifacts`
-- Run GitHub check workflow: `.github/workflows/review-check.yml` on pull requests
+- Run local source bot: `bun run review-bot --owner <owner> --repo <repo> --pr <number> [--instructions /absolute/or/workspace/path.md] [--instructions-profile <name>] [--artifact-execution agent|host] [--install-opencode] --workdir .`
+- Run published CLI: `bunx --bun @octavio.bot/review@latest review --owner <owner> --repo <repo> --pr <number> --workdir .`
+- Doctor command: `bunx --bun @octavio.bot/review@latest doctor`
+- Build publishable CLI dist: `bun run review-cli:build`
+- Run GitHub review workflow: `.github/workflows/review-check.yml` on pull requests
+- Run manual npm publish workflow: `.github/workflows/publish-review.yml` (`workflow_dispatch`, publishes from `apps/review-bot-cli`)
 - Lint and format check: `bun x ultracite check`
 - Auto-fix style/lint: `bun x ultracite fix`
 
 ### Runtime Expectations
 
 - `.env` should include `GITHUB_TOKEN`, OpenCode connection settings (`OPENCODE_HOSTNAME`, `OPENCODE_PORT`), and `OPENCODE_API_KEY` for OpenCode Zen; `OPENCODE_MODEL` is optional
+- CLI requires `opencode` binary: local mode is detect-only; CI mode auto-installs when missing; `--install-opencode` forces local auto-install
 - Default artifact execution is `agent` (OpenCode can write artifacts in-workspace); `external_directory` remains denied
 - Keep OpenCode prompts constrained to the provided workspace directory
 - Fail policy can come from profile config (`policy.failOn`) or instruction frontmatter (`policy.fail_on`)
@@ -207,13 +213,14 @@ Notes:
 - Repo config file: `.octavio/review.config.json` (committed in this repository)
 - CLI supports `--instructions-profile <name>` to select a profile
 - Security prompt profile (`security`) also treats PR title/description vs code mismatches as security-relevant deception signals
-- Profiles can define `artifactExecution` and `artifactSchema` (`artifactDir`, `reviewFile`, `confidenceFile`, `validatorCommand`, `maxAttempts`)
+- Profiles can define `artifactExecution` and `artifactSchema` (`artifactDir`, `reviewFile`, `confidenceFile`, `maxAttempts`)
 - Profile prompt selection uses `instructionsPrompt` (`balanced|styling|security`)
 - Instruction resolution order: explicit `--instructions`, then profile prompt, then `defaultProfile`, then package default prompt (`balanced`)
 - Policy resolution order: profile `policy.failOn`, then instructions frontmatter `policy.fail_on`
 - Policy mode is fail-closed: missing/empty/invalid policy configuration is an error
-- GitHub workflow runs a profile matrix (`balanced`, `styling`, `security`) with `max-parallel: 1`; each matrix job sets `OCTAVIO_INSTRUCTIONS_PROFILE` to the active profile
+- GitHub review workflow runs a profile matrix (`balanced`, `styling`, `security`) with `max-parallel: 1`; each matrix job sets `OCTAVIO_INSTRUCTIONS_PROFILE` to the active profile and executes `bunx --bun @octavio.bot/review@latest`
 
 ## Linked Context
 
 - @README.md
+- @apps/review-bot-cli/README.md
