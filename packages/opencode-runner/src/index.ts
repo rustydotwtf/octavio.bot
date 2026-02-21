@@ -115,13 +115,29 @@ const startEventLogging = async (
   client: OpenCodeClient
 ): Promise<{ done: Promise<void>; stop: () => void }> => {
   const { stream } = await client.event.subscribe();
+  const iterator = stream[Symbol.asyncIterator]();
   let stopped = false;
 
+  const closeStream = async (): Promise<void> => {
+    if (typeof iterator.return !== "function") {
+      return;
+    }
+
+    try {
+      await iterator.return();
+    } catch {
+      // Ignore close failures while shutting down logging.
+    }
+  };
+
   const done = (async () => {
-    for await (const event of stream) {
-      if (stopped) {
+    while (true) {
+      const next = await iterator.next();
+      if (next.done || stopped) {
         break;
       }
+
+      const event = next.value;
       if (!event || typeof event !== "object") {
         continue;
       }
@@ -155,7 +171,11 @@ const startEventLogging = async (
   return {
     done,
     stop: () => {
+      if (stopped) {
+        return;
+      }
       stopped = true;
+      void closeStream();
     },
   };
 };

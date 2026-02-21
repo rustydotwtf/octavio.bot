@@ -16,6 +16,7 @@ permissions:
 jobs:
   review:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -51,6 +52,7 @@ jobs:
 
       - name: Locate previous findings artifact
         id: previous-artifact
+        timeout-minutes: 2
         uses: actions/github-script@v7
         with:
           script: |
@@ -115,6 +117,7 @@ jobs:
           run-id: ${{ steps.previous-artifact.outputs.run_id }}
 
       - name: Run review check
+        timeout-minutes: 8
         env:
           GITHUB_TOKEN: ${{ github.token }}
           OPENCODE_HOSTNAME: ${{ vars.OPENCODE_HOSTNAME || '127.0.0.1' }}
