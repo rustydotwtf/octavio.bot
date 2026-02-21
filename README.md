@@ -1,31 +1,57 @@
 # octavio-review
 
-CI-first PR review gate that returns a GitHub check result (pass/fail) and uploads a report artifact.
+CI-first PR review gate that returns a GitHub check result (pass/fail) and uploads report artifacts.
 
 ## What It Does
 
 1. Builds PR context from changed files.
-2. Instructs OpenCode to write artifacts directly to disk using an Artifact Schema.
-3. Validates artifacts with `bun run validate-artifacts`.
+2. Instructs OpenCode to write artifacts directly to disk using an artifact schema.
+3. Validates artifacts in host runtime.
 4. Applies fail policy from profile config or instruction frontmatter.
 
 No GitHub review comments are created or updated.
 
-## Install
+## CLI Package
+
+Published CLI package: `@octavio.bot/review`.
+
+Run without local install:
 
 ```bash
-bun install
+bunx --bun @octavio.bot/review@latest review --owner acme --repo web --pr 123 --workdir .
+```
+
+CLI binary name: `octavio-review`.
+
+### OpenCode Detection and Install
+
+- The CLI checks for `opencode` before running reviews.
+- Local default: detect-only. If missing, it prints install steps and exits.
+- CI default (`GITHUB_ACTIONS=true`): auto-installs OpenCode when missing.
+- You can force auto-install locally with `--install-opencode`.
+
+Manual install command:
+
+```bash
+curl -fsSL https://opencode.ai/install | bash
+```
+
+Useful commands:
+
+```bash
+bunx --bun @octavio.bot/review@latest doctor
+bunx --bun @octavio.bot/review@latest install-opencode
 ```
 
 ## Environment
 
-Create `.env` with:
+Provide these variables:
 
 ```bash
 GITHUB_TOKEN=...
 OPENCODE_HOSTNAME=127.0.0.1
 OPENCODE_PORT=4096
-# OPENCODE_MODEL=... (optional; if omitted, OpenCode default model is used)
+# OPENCODE_MODEL=... (optional; OpenCode default is used if omitted)
 # OPENCODE_API_KEY=... (required for OpenCode Zen in CI)
 ```
 
@@ -34,7 +60,15 @@ For free OpenCode Zen models, use one of:
 - `opencode/minimax-m2.5-free`
 - `opencode/glm-5-free`
 
-## Local Run
+## Local Development
+
+Install workspace dependencies:
+
+```bash
+bun install
+```
+
+Run local source CLI:
 
 ```bash
 bun run review-bot --owner acme --repo web --pr 123 --instructions-profile balanced --workdir .
@@ -47,6 +81,7 @@ Optional flags:
 - `--result-output path/to/result.json`
 - `--instructions-profile balanced`
 - `--artifact-execution agent|host`
+- `--install-opencode`
 
 Instruction resolution order:
 
@@ -74,7 +109,6 @@ Create `.octavio/review.config.json` to manage instruction profiles and policy o
         "artifactDir": "artifacts",
         "reviewFile": "review.md",
         "confidenceFile": "confidence.json",
-        "validatorCommand": "bun run validate-artifacts --dir artifacts",
         "maxAttempts": 2
       },
       "instructionsPrompt": "balanced",
@@ -131,8 +165,6 @@ Default artifact schema writes these files into `artifacts/`:
 - `review.md` - human-readable review report
 - `confidence.json` - machine-readable summary and findings
 
-Validation is enforced by `bun run validate-artifacts --dir artifacts`.
-
 `confidence.json` schema requires:
 
 - `summary` (string)
@@ -140,22 +172,24 @@ Validation is enforced by `bun run validate-artifacts --dir artifacts`.
 - `findings` (array; each finding requires `id`, `severity`, `title`, `path`, `line`, `comment`)
 - `meta` (object)
 
-## GitHub Action
+## GitHub Actions
 
-Workflow file: `.github/workflows/review-check.yml`
-
-- Posts a concise summary in the job summary panel.
-- Uploads `review.md`, `confidence.json`, and `result.json` as artifacts.
-- Runs a profile matrix (`balanced`, `styling`, `security`) with `max-parallel: 1` so matrix jobs execute one at a time.
-- Defaults `OPENCODE_MODEL` to `opencode/minimax-m2.5-free` unless overridden by repository variable.
+- Review workflow: `.github/workflows/review-check.yml`
+  - Runs profile matrix (`balanced`, `styling`, `security`) with `max-parallel: 1`
+  - Uses `bunx --bun @octavio.bot/review@latest`
+  - Auto-installs OpenCode when missing in CI
+  - Uploads `review.md`, `confidence.json`, and `result.json` artifacts
+- CI workflow: `.github/workflows/ci.yml`
+  - Runs lint/build/test on workspace source
+  - Includes a published CLI smoke check via `bunx --bun @octavio.bot/review@latest doctor`
 
 ## Layout
 
-- `apps/review-bot-cli` CLI entrypoint.
+- `apps/review-bot-cli` publishable CLI package (`@octavio.bot/review`).
 - `packages/config` env/config parsing.
 - `packages/opencode-runner` OpenCode report generation with locked permissions.
 - `packages/github-review` GitHub REST helpers for PR metadata and file diffs.
 - `packages/agent-code-review` report parsing and policy evaluation.
 - `packages/prompts` publishable prompt package (`@octavio.bot/prompts`).
 
-`packages/*` is the canonical workspace package boundary. Empty or placeholder package directories are removed rather than kept around.
+`packages/*` remains the canonical reusable workspace boundary. Empty or placeholder package directories are removed rather than kept around.

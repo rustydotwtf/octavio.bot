@@ -1,12 +1,24 @@
 {
-  "name": "@octavio.bot/review-bot-cli",
-  "private": true,
+  "name": "@octavio.bot/review",
+  "version": "0.1.0",
+  "private": false,
+  "description": "CLI for OpenCode-powered pull request review checks",
+  "bin": {
+    "octavio-review": "./dist/index.mjs"
+  },
+  "files": [
+    "dist"
+  ],
   "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "bun build ./src/index.ts --outfile ./dist/index.mjs --target bun",
+    "prepack": "bun run build"
+  },
   "dependencies": {
-    "@octavio.bot/agent-code-review": "workspace:*",
-    "@octavio.bot/config": "workspace:*",
-    "@octavio.bot/github-review": "workspace:*",
-    "@octavio.bot/opencode-runner": "workspace:*",
-    "@octavio.bot/prompts": "workspace:*"
+    "@opencode-ai/sdk": "^1.2.10",
+    "zod": "^4.1.12"
   }
 }
