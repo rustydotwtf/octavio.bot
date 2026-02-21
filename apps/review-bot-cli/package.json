@@ -1,12 +1,12 @@
 {
-  "name": "@octavio/review-bot-cli",
+  "name": "@octavio.bot/review-bot-cli",
   "private": true,
   "type": "module",
   "dependencies": {
-    "@octavio.bot/prompts": "workspace:*",
-    "@octavio/agent-code-review": "workspace:*",
-    "@octavio/config": "workspace:*",
-    "@octavio/github-review": "workspace:*",
-    "@octavio/opencode-runner": "workspace:*"
+    "@octavio.bot/agent-code-review": "workspace:*",
+    "@octavio.bot/config": "workspace:*",
+    "@octavio.bot/github-review": "workspace:*",
+    "@octavio.bot/opencode-runner": "workspace:*",
+    "@octavio.bot/prompts": "workspace:*"
   }
 }

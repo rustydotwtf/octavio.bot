@@ -1,4 +1,4 @@
-import type { ReviewFinding } from "@octavio/agent-code-review";
+import type { ReviewFinding } from "@octavio.bot/agent-code-review";
 
 const computeFingerprint = (finding: {
   line: number;

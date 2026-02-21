@@ -1,22 +1,22 @@
-import {
-  DEFAULT_PROMPT_PROFILE,
-  isPromptProfile,
-  resolvePromptPath,
-} from "@octavio.bot/prompts";
-import { CodeReviewWorkflow } from "@octavio/agent-code-review";
+import { CodeReviewWorkflow } from "@octavio.bot/agent-code-review";
 import type {
   ArtifactExecution,
   CliInput,
   ReviewConfig,
-} from "@octavio/config";
+} from "@octavio.bot/config";
 import {
   loadReviewConfig,
   loadRuntimeEnv,
   resolvePathFromWorkspace,
   resolveWorkspaceDirectory,
-} from "@octavio/config";
-import { GitHubReviewClient } from "@octavio/github-review";
-import { OpenCodeReportRunner } from "@octavio/opencode-runner";
+} from "@octavio.bot/config";
+import { GitHubReviewClient } from "@octavio.bot/github-review";
+import { OpenCodeReportRunner } from "@octavio.bot/opencode-runner";
+import {
+  DEFAULT_PROMPT_PROFILE,
+  isPromptProfile,
+  resolvePromptPath,
+} from "@octavio.bot/prompts";
 
 import { readPreviousFindings } from "./previous-findings";
 
