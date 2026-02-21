@@ -99,7 +99,7 @@ This repository includes a committed `.octavio/review.config.json` with three pr
 
 - `balanced` (`prompts/code-review.md`)
 - `styling` (`prompts/styling-review.md`)
-- `security` (`prompts/security-review.md`)
+- `security` (`prompts/security-review.md`, including PR metadata/code mismatch checks)
 
 ## Policy Configuration
 

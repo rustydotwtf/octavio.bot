@@ -167,6 +167,7 @@ This repository now uses a Bun workspace monorepo:
 
 - Repo config file: `.octavio/review.config.json` (committed in this repository)
 - CLI supports `--instructions-profile <name>` to select a profile
+- Security profile (`prompts/security-review.md`) also treats PR title/description vs code mismatches as security-relevant deception signals
 - Profiles can define `artifactExecution` and `artifactSchema` (`artifactDir`, `reviewFile`, `confidenceFile`, `validatorCommand`, `maxAttempts`)
 - Instruction resolution order: explicit `--instructions`, then profile, then `defaultProfile`, then `prompts/code-review.md`
 - Policy resolution order: profile `policy.failOn`, then instructions frontmatter `policy.fail_on`, then fail-open fallback
