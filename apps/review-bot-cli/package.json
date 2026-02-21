@@ -3,6 +3,15 @@
   "version": "0.1.0",
   "private": false,
   "description": "CLI for OpenCode-powered pull request review checks",
+  "homepage": "https://github.com/rustydotwtf/octavio.bot/tree/main/apps/review-bot-cli",
+  "bugs": {
+    "url": "https://github.com/rustydotwtf/octavio.bot/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rustydotwtf/octavio.bot.git",
+    "directory": "apps/review-bot-cli"
+  },
   "bin": {
     "octavio-review": "./dist/index.mjs"
   },

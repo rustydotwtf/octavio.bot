@@ -114,3 +114,6 @@ Default artifact schema writes these files into `artifacts/`:
   - Uploads `review.md`, `confidence.json`, and `result.json`
 - CI workflow: `.github/workflows/ci.yml`
   - Includes smoke test: `bunx --bun @octavio.bot/review@latest doctor`
+- Publish workflow: `.github/workflows/publish-review.yml`
+  - Manual only (`workflow_dispatch`)
+  - Publishes from `apps/review-bot-cli` using npm trusted publishing (OIDC)

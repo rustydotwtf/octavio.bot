@@ -43,3 +43,4 @@ Useful workflow commands:
 
 - `.github/workflows/ci.yml` runs workspace lint/build/test and a published CLI smoke check
 - `.github/workflows/review-check.yml` runs PR review profiles via `bunx --bun @octavio.bot/review@latest`
+- `.github/workflows/publish-review.yml` is manual (`workflow_dispatch`) and publishes `@octavio.bot/review` from `apps/review-bot-cli`
