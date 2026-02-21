@@ -206,6 +206,7 @@ Task orchestration notes:
 - Root `check`, `build`, and `test` run through Turborepo (`turbo run ...`) and then apply root-level checks where needed.
 - Root `sync` runs Turborepo `sync` tasks across apps/packages; use this for generated workspace artifacts that should stay in sync.
 - Prompt markdown source-of-truth is `packages/prompts/prompts/*.md`; `apps/review-bot-cli/prompts/` is generated during CLI build/prepack for published tarballs.
+- CI runs `bun run sync` and fails on tracked git drift to enforce generated artifact consistency.
 
 ### Runtime Expectations
 
