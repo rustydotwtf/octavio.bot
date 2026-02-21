@@ -109,6 +109,59 @@ const extractResponseParts = (response: { data?: unknown }): Part[] => {
   return [];
 };
 
+const extractResponseText = (response: { data?: unknown }): string | null => {
+  const { data } = response;
+  if (typeof data === "string") {
+    const trimmed = data.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }
+
+  if (!data || typeof data !== "object") {
+    return null;
+  }
+
+  const candidate = data as {
+    data?: { text?: unknown };
+    message?: { text?: unknown };
+    output?: unknown;
+    text?: unknown;
+  };
+
+  const possibleTextValues = [
+    candidate.text,
+    candidate.output,
+    candidate.message?.text,
+    candidate.data?.text,
+  ];
+
+  for (const value of possibleTextValues) {
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+      if (trimmed.length > 0) {
+        return trimmed;
+      }
+    }
+  }
+
+  return null;
+};
+
+const safeJsonPreview = (value: unknown): string => {
+  try {
+    const encoded = JSON.stringify(value);
+    if (!encoded) {
+      return "<empty>";
+    }
+
+    const maxChars = 1200;
+    return encoded.length > maxChars
+      ? `${encoded.slice(0, maxChars)}...`
+      : encoded;
+  } catch {
+    return "<unserializable>";
+  }
+};
+
 const buildLockedConfig = (model: string): Config => ({
   model,
   permission: {
@@ -174,8 +227,13 @@ export class OpenCodeReportRunner {
 
       const responseParts = extractResponseParts(response);
       if (responseParts.length === 0) {
+        const responseText = extractResponseText(response);
+        if (responseText) {
+          return responseText;
+        }
+
         throw new Error(
-          "OpenCode response did not include assistant message parts."
+          `OpenCode response did not include assistant message parts. Response preview: ${safeJsonPreview(response.data)}`
         );
       }
 
