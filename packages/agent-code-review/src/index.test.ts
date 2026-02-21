@@ -14,6 +14,7 @@ interface CreateWorkflowOptions {
   onGenerateReport?: (input: GenerateReportInput) => void;
   pullRequestBody?: string | null;
   pullRequestTitle?: string;
+  usedStructuredOutput?: boolean;
 }
 
 const createWorkflow = (
@@ -57,7 +58,7 @@ const createWorkflow = (
           confidenceJson: "{}",
           reportMarkdown: "# Review",
           structuredFindings: findings,
-          usedStructuredOutput: true,
+          usedStructuredOutput: options.usedStructuredOutput ?? true,
         };
       },
     } as unknown as OpenCodeReportRunner,
@@ -166,6 +167,32 @@ describe("policy parsing precedence", () => {
     expect(result.policy.source).toBe("frontmatter");
     expect(result.policy.shouldFail).toBeTrue();
     expect(result.policy.matchedRules).toEqual(["any:critical"]);
+  });
+
+  it("fails when runner does not return structured findings", async () => {
+    const workflow = createWorkflow("critical", {
+      usedStructuredOutput: false,
+    });
+
+    await expect(
+      workflow.run({
+        artifactExecution: "agent",
+        artifactSchema: {
+          artifactDir: "artifacts",
+          confidenceFile: "confidence.json",
+          maxAttempts: 1,
+          reviewFile: "review.md",
+          validatorCommand: "bun run validate-artifacts --dir artifacts",
+        },
+        instructionsMarkdown: `---\npolicy:\n  fail_on:\n    - "any:critical"\n---\n`,
+        previousFindings: [],
+        repo: {
+          owner: "acme",
+          pullNumber: 1,
+          repo: "web",
+        },
+      })
+    ).rejects.toThrow("Review runner must return structured findings output.");
   });
 
   it("passes PR title and body into the OpenCode context", async () => {

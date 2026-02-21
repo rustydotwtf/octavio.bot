@@ -60,15 +60,6 @@ export interface ReviewRunResult {
   summary: string;
 }
 
-interface ReportFinding {
-  comment: string;
-  id: string;
-  line: number;
-  path: string;
-  severity: string;
-  title: string;
-}
-
 interface PolicyRule {
   raw: string;
   scope: PolicyScope;
@@ -93,12 +84,6 @@ const writeWorkflowLog = (message: string): void => {
   process.stdout.write(`[review-workflow] ${message}\n`);
 };
 
-const stripCodeFence = (jsonBlock: string): string =>
-  jsonBlock
-    .replace(/^```json\s*/u, "")
-    .replace(/```$/u, "")
-    .trim();
-
 const normalizeSeverity = (severity: string): FindingSeverity | null => {
   const normalized = severity.trim().toLowerCase();
   if (VALID_SEVERITIES.has(normalized as FindingSeverity)) {
@@ -121,92 +106,44 @@ const computeFingerprint = (finding: {
     finding.title.trim().toLowerCase(),
   ].join("|");
 
-const parseFindingsFromReport = (reportMarkdown: string): ReviewFinding[] => {
-  const blockMatch = reportMarkdown.match(/```json[\s\S]*?```/u);
-  if (!blockMatch) {
-    return [];
-  }
-
-  try {
-    const parsed = JSON.parse(stripCodeFence(blockMatch[0])) as {
-      findings?: ReportFinding[];
-    };
-
-    const rawFindings = parsed.findings ?? [];
-    const findings: ReviewFinding[] = [];
-
-    for (const finding of rawFindings) {
-      const severity = normalizeSeverity(finding.severity);
-      if (
-        !severity ||
-        !finding.id ||
-        !finding.path ||
-        !Number.isInteger(finding.line) ||
-        finding.line <= 0
-      ) {
-        continue;
-      }
-
-      findings.push({
-        comment: finding.comment,
-        fingerprint: computeFingerprint({
-          line: finding.line,
-          path: finding.path,
-          severity,
-          title: finding.title,
-        }),
-        id: finding.id,
-        line: finding.line,
-        path: finding.path,
-        severity,
-        title: finding.title,
-      });
-    }
-
-    return findings;
-  } catch {
-    return [];
-  }
-};
-
 const parseFindingsFromRunner = (
   report: GenerateReportResult
 ): ReviewFinding[] => {
-  if (report.usedStructuredOutput) {
-    const findings: ReviewFinding[] = [];
+  if (!report.usedStructuredOutput) {
+    throw new Error("Review runner must return structured findings output.");
+  }
 
-    for (const finding of report.structuredFindings) {
-      const severity = normalizeSeverity(finding.severity);
-      if (
-        !severity ||
-        !finding.id ||
-        !finding.path ||
-        !Number.isInteger(finding.line) ||
-        finding.line <= 0
-      ) {
-        continue;
-      }
+  const findings: ReviewFinding[] = [];
 
-      findings.push({
-        comment: finding.comment,
-        fingerprint: computeFingerprint({
-          line: finding.line,
-          path: finding.path,
-          severity,
-          title: finding.title,
-        }),
-        id: finding.id,
+  for (const finding of report.structuredFindings) {
+    const severity = normalizeSeverity(finding.severity);
+    if (
+      !severity ||
+      !finding.id ||
+      !finding.path ||
+      !Number.isInteger(finding.line) ||
+      finding.line <= 0
+    ) {
+      continue;
+    }
+
+    findings.push({
+      comment: finding.comment,
+      fingerprint: computeFingerprint({
         line: finding.line,
         path: finding.path,
         severity,
         title: finding.title,
-      });
-    }
-
-    return findings;
+      }),
+      id: finding.id,
+      line: finding.line,
+      path: finding.path,
+      severity,
+      title: finding.title,
+    });
   }
 
-  return parseFindingsFromReport(report.reportMarkdown);
+  return findings;
 };
 
 const compareFindings = (

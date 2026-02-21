@@ -49,7 +49,13 @@ const parseArtifactExecution = (
     return undefined;
   }
 
-  return rawValue === "host" ? "host" : "agent";
+  if (rawValue === "host" || rawValue === "agent") {
+    return rawValue;
+  }
+
+  throw new Error(
+    `Invalid --artifact-execution value '${rawValue}'. Supported values: agent, host.`
+  );
 };
 
 const resolveArtifactSchema = (

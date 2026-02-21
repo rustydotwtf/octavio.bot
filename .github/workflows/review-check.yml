@@ -103,9 +103,6 @@ jobs:
               "### Summary",
               result.summary,
             ];
-            if (Array.isArray(result.policy.warnings) && result.policy.warnings.length > 0) {
-              lines.push("", "### Policy Warnings", ...result.policy.warnings.map((warning) => `- ${warning}`));
-            }
             await Bun.write(Bun.stdout, `${lines.join("\n")}\n`);' >> "$GITHUB_STEP_SUMMARY"
           else
             printf '## Octavio Review\n\nRun failed before report generation.\n' >> "$GITHUB_STEP_SUMMARY"
