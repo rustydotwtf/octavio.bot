@@ -170,4 +170,4 @@ This repository now uses a Bun workspace monorepo:
 - Profiles can define `artifactExecution` and `artifactSchema` (`artifactDir`, `reviewFile`, `confidenceFile`, `validatorCommand`, `maxAttempts`)
 - Instruction resolution order: explicit `--instructions`, then profile, then `defaultProfile`, then `prompts/code-review.md`
 - Policy resolution order: profile `policy.failOn`, then instructions frontmatter `policy.fail_on`, then fail-open fallback
-- GitHub workflow runs a profile matrix (`balanced`, `styling`, `security`) with `max-parallel: 1`; each matrix job sets `OCTAVIO_INSTRUCTIONS_PROFILE` to the active profile
+- GitHub workflow runs a profile matrix (`balanced`, `styling`, `security`, `pr-intent`) with `max-parallel: 1`; each matrix job sets `OCTAVIO_INSTRUCTIONS_PROFILE` to the active profile

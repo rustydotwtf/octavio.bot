@@ -436,6 +436,12 @@ const formatPullRequestContext = (
   pullRequest: { title: string; body: string | null; number: number },
   files: PullRequestFile[]
 ): string => {
+  const descriptionText = pullRequest.body?.trim() ?? "";
+  const description =
+    descriptionText.length > 0
+      ? descriptionText
+      : "(No PR description provided)";
+
   const fileList = files
     .map(
       (file) =>
@@ -447,7 +453,7 @@ ${truncatePatch(file.patch)}`
   return [
     `PR #${pullRequest.number}: ${pullRequest.title}`,
     "",
-    pullRequest.body ?? "",
+    description,
     "",
     "## Changed Files",
     fileList,
