@@ -29,6 +29,7 @@ Run from repo root:
 
 - Package metadata lives in `apps/review-bot-cli/package.json`.
 - Keep `bin`, `files`, and `prepack` accurate for npm consumers.
+- `prepack` must produce an executable `dist/index.mjs` and include `prompts/*.md` in the published tarball (the bundled CLI resolves default prompt files from package-relative paths).
 - If CLI behavior or flags change, update both:
   - `apps/review-bot-cli/README.md`
   - root `README.md` links/overview where relevant

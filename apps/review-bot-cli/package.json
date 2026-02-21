@@ -1,6 +1,6 @@
 {
   "name": "@octavio.bot/review",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": false,
   "description": "CLI for OpenCode-powered pull request review checks",
   "homepage": "https://github.com/rustydotwtf/octavio.bot/tree/main/apps/review-bot-cli",
@@ -16,14 +16,15 @@
     "octavio-review": "./dist/index.mjs"
   },
   "files": [
-    "dist"
+    "dist",
+    "prompts"
   ],
   "type": "module",
   "publishConfig": {
     "access": "public"
   },
   "scripts": {
-    "build": "bun build ./src/index.ts --outfile ./dist/index.mjs --target bun",
+    "build": "bun build ./src/index.ts --outfile ./dist/index.mjs --target bun --banner '#!/usr/bin/env bun' && chmod +x ./dist/index.mjs && rm -rf ./prompts && mkdir -p ./prompts && cp ../../packages/prompts/prompts/*.md ./prompts/",
     "prepack": "bun run build"
   },
   "dependencies": {
