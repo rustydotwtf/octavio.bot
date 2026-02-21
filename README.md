@@ -157,3 +157,5 @@ Workflow file: `.github/workflows/review-check.yml`
 - `packages/github-review` GitHub REST helpers for PR metadata and file diffs.
 - `packages/agent-code-review` report parsing and policy evaluation.
 - `packages/prompts` publishable prompt package (`@octavio.bot/prompts`).
+
+`packages/*` is the canonical workspace package boundary. Empty or placeholder package directories are removed rather than kept around.

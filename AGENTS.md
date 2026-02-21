@@ -185,7 +185,8 @@ This repository now uses a Bun workspace monorepo:
 
 Notes:
 
-- Package directories may be created for experimentation before implementation. If a package is empty or unused, remove it instead of keeping placeholders.
+- `packages/*` is the canonical workspace package boundary. Do not keep placeholder package directories.
+- Every package directory must contain a tracked `package.json` and source files. If a package is empty or unused, delete the directory.
 
 ### Common Commands
 
