@@ -38,9 +38,9 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           OPENCODE_HOSTNAME: ${{ vars.OPENCODE_HOSTNAME || '127.0.0.1' }}
           OCTAVIO_INSTRUCTIONS_PROFILE: ${{ matrix.profile }}
-          OPENCODE_MODEL: ${{ vars.OPENCODE_MODEL || 'opencode/minimax-m2.5-free' }}
+          OPENCODE_MODEL: opencode/minimax-m2.5-free
           OPENCODE_PORT: ${{ vars.OPENCODE_PORT || '4096' }}
-          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY || '' }}
         run: |
           mkdir -p artifacts
           PROFILE_ARGS=""
@@ -79,7 +79,7 @@ jobs:
             ];
             await Bun.write(Bun.stdout, `${lines.join("\n")}\n`);' >> "$GITHUB_STEP_SUMMARY"
           else
-            printf '## Octavio Review\n\nRun failed before report generation.\n' >> "$GITHUB_STEP_SUMMARY"
+            printf '## Octavio Review\n\nRun failed before report generation.\n\nTroubleshooting:\n- Confirm workflow env uses OPENCODE_MODEL=opencode/minimax-m2.5-free.\n- If you switch to a non-free model, set repository secret OPENCODE_API_KEY.\n- Check run logs for OpenCode connection/auth/model errors.\n' >> "$GITHUB_STEP_SUMMARY"
           fi
 
       - name: Upload report artifact

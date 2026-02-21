@@ -192,6 +192,7 @@ Notes:
 ### Common Commands
 
 - Run local source bot: `bun run review-bot --owner <owner> --repo <repo> --pr <number> [--instructions /absolute/or/workspace/path.md] [--instructions-profile <name>] [--artifact-execution agent|host] [--install-opencode] --workdir .`
+- Initialize Octavio files in a target repo: `bunx --bun @octavio.bot/review@latest init --workdir . [--force]`
 - Run published CLI: `bunx --bun @octavio.bot/review@latest review --owner <owner> --repo <repo> --pr <number> --workdir .`
 - Doctor command: `bunx --bun @octavio.bot/review@latest doctor`
 - Run workspace sync tasks: `bun run sync`

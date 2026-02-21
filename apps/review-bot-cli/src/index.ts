@@ -19,11 +19,11 @@ import {
   resolvePromptPath,
 } from "@octavio.bot/prompts";
 
+import { scaffoldReviewSetup } from "./init";
+import { ensureOpenCodeInstalled, runDoctor } from "./opencode";
+import { troubleshootingGuidance } from "./troubleshooting";
+
 const REPORT_LOG_MAX_CHARS = 8000;
-const OPEN_CODE_INSTALL_COMMAND =
-  "curl -fsSL https://opencode.ai/install | bash";
-const OPEN_CODE_INSTALL_COMMAND_NO_PATH =
-  "curl -fsSL https://opencode.ai/install | bash -s -- --no-modify-path";
 
 interface ResolvedInstructions {
   artifactExecution: ArtifactExecution;
@@ -43,9 +43,9 @@ interface ParsedArgs {
   positional: string[];
 }
 
-interface OpenCodeInstallResult {
-  path: string;
-  version: string;
+interface InitInput {
+  force: boolean;
+  workspaceDirectory: string;
 }
 
 const DEFAULT_ARTIFACT_DIR = "artifacts";
@@ -59,6 +59,7 @@ const usage = (): string =>
   [
     "Usage:",
     "  octavio-review review --owner <owner> --repo <repo> --pr <number> [options]",
+    "  octavio-review init [options]",
     "  octavio-review doctor",
     "  octavio-review install-opencode",
     "",
@@ -71,6 +72,10 @@ const usage = (): string =>
     "  --findings-output <path>",
     "  --result-output <path>",
     "  --install-opencode (force auto-install if missing)",
+    "",
+    "Options for init:",
+    "  --workdir <path>",
+    "  --force (overwrite existing files)",
   ].join("\n");
 
 const parseArtifactExecution = (
@@ -183,6 +188,22 @@ const parseReviewInput = (
   };
 };
 
+const parseInitInput = (argv: string[]): InitInput => {
+  const { flags, positional } = parseArgs(argv);
+  if (positional.length > 0) {
+    throw new Error(
+      `Unexpected positional arguments for init: ${positional.join(", ")}\n\n${usage()}`
+    );
+  }
+
+  return {
+    force: hasBooleanFlag(flags, "force"),
+    workspaceDirectory: resolveWorkspaceDirectory(
+      getStringFlag(flags, "workdir") ?? process.cwd()
+    ),
+  };
+};
+
 const resolveInstructions = (
   cliInput: CliInput,
   config: ReviewConfig | null
@@ -245,157 +266,36 @@ const truncateForLogs = (value: string): string =>
     ? `${value.slice(0, REPORT_LOG_MAX_CHARS)}\n...truncated...`
     : value;
 
-const ensureBinaryDirectoryOnPath = (binaryPath: string): void => {
-  const directoryEnd = binaryPath.lastIndexOf("/");
-  if (directoryEnd <= 0) {
-    return;
-  }
-
-  const directory = binaryPath.slice(0, directoryEnd);
-  const currentPath = process.env.PATH ?? "";
-  const pathEntries = currentPath
-    .split(":")
-    .filter((entry) => entry.length > 0);
-  if (pathEntries.includes(directory)) {
-    return;
-  }
-
-  process.env.PATH =
-    currentPath.length > 0 ? `${directory}:${currentPath}` : directory;
-  process.stdout.write(`Added ${directory} to PATH for this process.\n`);
-};
-
-const knownOpenCodePaths = (): string[] => {
-  const home = process.env.HOME;
-  return [
-    Bun.which("opencode") ?? "",
-    home ? `${home}/.opencode/bin/opencode` : "",
-    home ? `${home}/.local/bin/opencode` : "",
-  ].filter(
-    (value, index, values) =>
-      value.length > 0 && values.indexOf(value) === index
-  );
-};
-
-const readProcessOutput = async (
-  stream: ReadableStream<Uint8Array> | null
-): Promise<string> => (stream ? await new Response(stream).text() : "");
-
-const getOpenCodeVersion = async (
-  binaryPath: string
-): Promise<string | null> => {
-  const subprocess = Bun.spawn([binaryPath, "--version"], {
-    stderr: "pipe",
-    stdout: "pipe",
-  });
-  const [exitCode, stderr, stdout] = await Promise.all([
-    subprocess.exited,
-    readProcessOutput(subprocess.stderr),
-    readProcessOutput(subprocess.stdout),
-  ]);
-  if (exitCode !== 0) {
-    const details = stderr.trim();
-    return details.length > 0 ? details : null;
-  }
-
-  const version = stdout.trim();
-  return version.length > 0 ? version : null;
-};
-
-const detectOpenCode = async (): Promise<OpenCodeInstallResult | null> => {
-  for (const candidatePath of knownOpenCodePaths()) {
-    const file = Bun.file(candidatePath);
-    if (!(await file.exists())) {
-      continue;
-    }
-
-    const version = await getOpenCodeVersion(candidatePath);
-    return {
-      path: candidatePath,
-      version: version ?? "unknown",
-    };
-  }
-
-  return null;
-};
-
-const runOpenCodeInstall = async (): Promise<void> => {
-  process.stdout.write("OpenCode was not found. Installing now...\n");
+const runInit = async (argv: string[]): Promise<void> => {
+  const input = parseInitInput(argv);
   process.stdout.write(
-    `Install command: ${OPEN_CODE_INSTALL_COMMAND_NO_PATH}\n`
+    `Initializing Octavio review in ${input.workspaceDirectory}...\n`
   );
 
-  const subprocess = Bun.spawn(
-    ["bash", "-lc", OPEN_CODE_INSTALL_COMMAND_NO_PATH],
-    {
-      stderr: "inherit",
-      stdout: "inherit",
-    }
+  const results = await scaffoldReviewSetup(
+    input.workspaceDirectory,
+    input.force
   );
-  const exitCode = await subprocess.exited;
-  if (exitCode !== 0) {
-    throw new Error(
-      [
-        "Failed to auto-install OpenCode.",
-        `Run this manually and retry: ${OPEN_CODE_INSTALL_COMMAND}`,
-      ].join("\n")
-    );
+  for (const result of results) {
+    process.stdout.write(`- ${result.status}: ${result.relativePath}\n`);
   }
-};
 
-const ensureOpenCodeInstalled = async (
-  forceInstall: boolean
-): Promise<OpenCodeInstallResult> => {
-  const detectedBeforeInstall = await detectOpenCode();
-  if (detectedBeforeInstall) {
-    ensureBinaryDirectoryOnPath(detectedBeforeInstall.path);
+  const skippedCount = results.filter(
+    (result) => result.status === "skipped"
+  ).length;
+  if (skippedCount > 0 && !input.force) {
     process.stdout.write(
-      `OpenCode detected at ${detectedBeforeInstall.path} (${detectedBeforeInstall.version}).\n`
-    );
-    return detectedBeforeInstall;
-  }
-
-  const shouldAutoInstall =
-    forceInstall || process.env.GITHUB_ACTIONS === "true";
-  if (!shouldAutoInstall) {
-    throw new Error(
-      [
-        "OpenCode CLI is required but was not found.",
-        `Install it with: ${OPEN_CODE_INSTALL_COMMAND}`,
-        "Then rerun this command, or pass --install-opencode to auto-install.",
-      ].join("\n")
+      "Some files already existed and were skipped. Re-run with --force to overwrite.\n"
     );
   }
 
-  await runOpenCodeInstall();
-  const detectedAfterInstall = await detectOpenCode();
-  if (!detectedAfterInstall) {
-    throw new Error(
-      [
-        "OpenCode install completed but the binary was still not detected.",
-        `Try opening a new shell or run manually: ${OPEN_CODE_INSTALL_COMMAND}`,
-      ].join("\n")
-    );
-  }
-
+  process.stdout.write("Next steps:\n");
   process.stdout.write(
-    `OpenCode installed at ${detectedAfterInstall.path} (${detectedAfterInstall.version}).\n`
+    "1. Commit .octavio/review.config.json and .github/workflows/review-check.yml.\n"
   );
-  ensureBinaryDirectoryOnPath(detectedAfterInstall.path);
-  return detectedAfterInstall;
-};
-
-const runDoctor = async (): Promise<void> => {
-  const detected = await detectOpenCode();
-  process.stdout.write("Octavio doctor\n");
-  process.stdout.write(`- bun: ${Bun.version}\n`);
-  if (detected) {
-    process.stdout.write(`- opencode: installed (${detected.version})\n`);
-    process.stdout.write(`- opencode-path: ${detected.path}\n`);
-  } else {
-    process.stdout.write("- opencode: missing\n");
-    process.stdout.write(`- install: ${OPEN_CODE_INSTALL_COMMAND}\n`);
-  }
+  process.stdout.write(
+    "2. Optional: set OPENCODE_API_KEY if you switch away from the default free model.\n"
+  );
 };
 
 const runReview = async (argv: string[]): Promise<void> => {
@@ -510,6 +410,11 @@ const run = async (): Promise<void> => {
     return;
   }
 
+  if (firstArg === "init") {
+    await runInit(args.slice(1));
+    return;
+  }
+
   if (firstArg === "install-opencode") {
     await ensureOpenCodeInstalled(true);
     return;
@@ -533,6 +438,13 @@ try {
 } catch (error: unknown) {
   const message = error instanceof Error ? error.message : String(error);
   process.stderr.write(`octavio-review failed: ${message}\n`);
+  const guidance = troubleshootingGuidance(message);
+  if (guidance.length > 0) {
+    process.stderr.write("Troubleshooting:\n");
+    for (const line of guidance) {
+      process.stderr.write(`- ${line}\n`);
+    }
+  }
   process.exitCode = 1;
 }
 

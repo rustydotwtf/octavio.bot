@@ -17,6 +17,19 @@ No GitHub review comments are created or updated.
 bunx --bun @octavio.bot/review@latest review --owner acme --repo web --pr 123 --workdir .
 ```
 
+Initialize Octavio in your repository:
+
+```bash
+bunx --bun @octavio.bot/review@latest init --workdir .
+```
+
+This scaffolds:
+
+- `.octavio/review.config.json`
+- `.github/workflows/review-check.yml`
+
+The generated workflow defaults to `OPENCODE_MODEL=opencode/minimax-m2.5-free` and sets `OPENCODE_API_KEY` to an empty fallback (`''`). If you move to a non-free model, set repository secret `OPENCODE_API_KEY`.
+
 CLI binary name: `octavio-review`.
 
 ## OpenCode Detection and Install
@@ -78,6 +91,11 @@ Optional flags:
 - `--artifact-execution agent|host`
 - `--install-opencode`
 
+Init flags:
+
+- `--workdir path/to/repo`
+- `--force` (overwrite existing scaffolded files)
+
 ## Instruction Profiles
 
 Instruction resolution order:
@@ -117,9 +135,17 @@ Default artifact schema writes these files into `artifacts/`:
 - Review workflow: `.github/workflows/review-check.yml`
   - Runs profile matrix (`balanced`, `styling`, `security`) with `max-parallel: 1`
   - Uses `bunx --bun @octavio.bot/review@latest`
+  - Defaults to `OPENCODE_MODEL=opencode/minimax-m2.5-free`
+  - Uses `OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY || '' }}`
   - Uploads `review.md`, `confidence.json`, and `result.json`
 - CI workflow: `.github/workflows/ci.yml`
   - Includes smoke test: `bunx --bun @octavio.bot/review@latest doctor`
 - Publish workflow: `.github/workflows/publish-review.yml`
   - Manual only (`workflow_dispatch`)
   - Publishes from `apps/review-bot-cli` using npm trusted publishing (OIDC)
+
+## Troubleshooting
+
+- If runs fail after changing models, set repository secret `OPENCODE_API_KEY`.
+- If OpenCode is unreachable, verify `OPENCODE_HOSTNAME` and `OPENCODE_PORT`.
+- If GitHub API requests fail, verify `GITHUB_TOKEN` permissions.

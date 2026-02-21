@@ -11,7 +11,9 @@ Scope: applies to files under `apps/review-bot-cli`.
 ## Key Behavior
 
 - Primary command is `review`.
-- Support commands: `doctor`, `install-opencode`.
+- Support commands: `init`, `doctor`, `install-opencode`.
+- `init` scaffolds `.octavio/review.config.json` and `.github/workflows/review-check.yml`.
+- `init` defaults to skip existing files; use `--force` to overwrite.
 - OpenCode handling posture:
   - Local default: detect-only, print install command when missing.
   - CI default (`GITHUB_ACTIONS=true`): auto-install when missing.
