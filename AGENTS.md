@@ -145,12 +145,12 @@ This repository now uses a Bun workspace monorepo:
 - `packages/config` - runtime env and CLI config parsing
 - `packages/opencode-runner` - OpenCode SDK wrapper for artifact-schema generation and validation retries
 - `packages/github-review` - GitHub REST helpers for PR metadata and changed files
-- `packages/agent-runtime` - AI SDK gateway model factory (currently not used by CI check path)
 - `packages/agent-code-review` - report parsing, prior-run comparison, and instruction-driven policy evaluation
+- `packages/prompts` - publishable prompt package (`@octavio.bot/prompts`) and helper utilities
 
 ### Common Commands
 
-- Run bot: `bun run review-bot --owner <owner> --repo <repo> --pr <number> [--instructions prompts/code-review.md] [--instructions-profile <name>] [--artifact-execution agent|host] --workdir .`
+- Run bot: `bun run review-bot --owner <owner> --repo <repo> --pr <number> [--instructions /absolute/or/workspace/path.md] [--instructions-profile <name>] [--artifact-execution agent|host] --workdir .`
 - Validate artifacts: `bun run validate-artifacts --dir artifacts`
 - Run GitHub check workflow: `.github/workflows/review-check.yml` on pull requests
 - Lint and format check: `bun x ultracite check`
@@ -167,8 +167,9 @@ This repository now uses a Bun workspace monorepo:
 
 - Repo config file: `.octavio/review.config.json` (committed in this repository)
 - CLI supports `--instructions-profile <name>` to select a profile
-- Security profile (`prompts/security-review.md`) also treats PR title/description vs code mismatches as security-relevant deception signals
+- Security prompt profile (`security`) also treats PR title/description vs code mismatches as security-relevant deception signals
 - Profiles can define `artifactExecution` and `artifactSchema` (`artifactDir`, `reviewFile`, `confidenceFile`, `validatorCommand`, `maxAttempts`)
-- Instruction resolution order: explicit `--instructions`, then profile, then `defaultProfile`, then `prompts/code-review.md`
+- Profile prompt selection uses `instructionsPrompt` (`balanced|styling|security`)
+- Instruction resolution order: explicit `--instructions`, then profile prompt, then `defaultProfile`, then package default prompt (`balanced`)
 - Policy resolution order: profile `policy.failOn`, then instructions frontmatter `policy.fail_on`, then fail-open fallback
 - GitHub workflow runs a profile matrix (`balanced`, `styling`, `security`) with `max-parallel: 1`; each matrix job sets `OCTAVIO_INSTRUCTIONS_PROFILE` to the active profile

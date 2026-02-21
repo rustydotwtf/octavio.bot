@@ -10,7 +10,7 @@
         "reviewFile": "review.md",
         "validatorCommand": "bun run validate-artifacts --dir artifacts"
       },
-      "instructionsPath": "prompts/code-review.md",
+      "instructionsPrompt": "balanced",
       "policy": {
         "failOn": ["new:high", "new:critical"]
       }
@@ -24,7 +24,7 @@
         "reviewFile": "review.md",
         "validatorCommand": "bun run validate-artifacts --dir artifacts"
       },
-      "instructionsPath": "prompts/styling-review.md",
+      "instructionsPrompt": "styling",
       "policy": {
         "failOn": ["new:high", "new:critical"]
       }
@@ -38,7 +38,7 @@
         "reviewFile": "review.md",
         "validatorCommand": "bun run validate-artifacts --dir artifacts"
       },
-      "instructionsPath": "prompts/security-review.md",
+      "instructionsPrompt": "security",
       "policy": {
         "failOn": ["new:medium", "new:high", "new:critical"]
       }

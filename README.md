@@ -38,7 +38,7 @@ For free OpenCode Zen models, use one of:
 ## Local Run
 
 ```bash
-bun run review-bot --owner acme --repo web --pr 123 --instructions prompts/code-review.md --workdir .
+bun run review-bot --owner acme --repo web --pr 123 --instructions-profile balanced --workdir .
 ```
 
 Optional flags:
@@ -55,7 +55,7 @@ Instruction resolution order:
 1. `--instructions` (explicit path)
 2. `--instructions-profile` from `.octavio/review.config.json`
 3. `defaultProfile` from `.octavio/review.config.json`
-4. `prompts/code-review.md`
+4. `@octavio.bot/prompts` package default (`balanced`)
 
 Policy resolution order:
 
@@ -80,13 +80,13 @@ Create `.octavio/review.config.json` to manage instruction profiles and policy o
         "validatorCommand": "bun run validate-artifacts --dir artifacts",
         "maxAttempts": 2
       },
-      "instructionsPath": "prompts/code-review.md",
+      "instructionsPrompt": "balanced",
       "policy": {
         "failOn": ["new:high", "new:critical"]
       }
     },
     "security": {
-      "instructionsPath": "prompts/security-review.md",
+      "instructionsPrompt": "security",
       "policy": {
         "failOn": ["new:medium", "new:high", "new:critical"]
       }
@@ -97,9 +97,9 @@ Create `.octavio/review.config.json` to manage instruction profiles and policy o
 
 This repository includes a committed `.octavio/review.config.json` with three profiles:
 
-- `balanced` (`prompts/code-review.md`)
-- `styling` (`prompts/styling-review.md`)
-- `security` (`prompts/security-review.md`, including PR metadata/code mismatch checks)
+- `balanced` (`@octavio.bot/prompts` `balanced` prompt)
+- `styling` (`@octavio.bot/prompts` `styling` prompt)
+- `security` (`@octavio.bot/prompts` `security` prompt, including PR metadata/code mismatch checks)
 
 ## Policy Configuration
 
@@ -160,3 +160,4 @@ Workflow file: `.github/workflows/review-check.yml`
 - `packages/opencode-runner` OpenCode report generation with locked permissions.
 - `packages/github-review` GitHub REST helpers for PR metadata and file diffs.
 - `packages/agent-code-review` report parsing, previous-run comparison, and policy evaluation.
+- `packages/prompts` publishable prompt package (`@octavio.bot/prompts`).

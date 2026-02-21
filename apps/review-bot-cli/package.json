@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "dependencies": {
+    "@octavio.bot/prompts": "workspace:*",
     "@octavio/agent-code-review": "workspace:*",
     "@octavio/config": "workspace:*",
     "@octavio/github-review": "workspace:*",

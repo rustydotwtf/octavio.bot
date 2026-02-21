@@ -1,0 +1,17 @@
+{
+  "name": "@octavio.bot/prompts",
+  "version": "0.0.0",
+  "private": false,
+  "files": [
+    "prompts",
+    "src"
+  ],
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./prompts/*": "./prompts/*"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

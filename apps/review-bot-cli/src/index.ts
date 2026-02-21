@@ -1,3 +1,8 @@
+import {
+  DEFAULT_PROMPT_PROFILE,
+  isPromptProfile,
+  resolvePromptPath,
+} from "@octavio.bot/prompts";
 import { CodeReviewWorkflow } from "@octavio/agent-code-review";
 import type {
   ArtifactExecution,
@@ -15,7 +20,6 @@ import { OpenCodeReportRunner } from "@octavio/opencode-runner";
 
 import { readPreviousFindings } from "./previous-findings";
 
-const DEFAULT_INSTRUCTIONS_PATH = "prompts/code-review.md";
 const REPORT_LOG_MAX_CHARS = 8000;
 
 interface ResolvedInstructions {
@@ -96,7 +100,7 @@ const parseArgs = (argv: string[]): CliInput => {
 
   if (!owner || !repo || Number.isNaN(pullNumber)) {
     throw new Error(
-      "Missing required args. Example: --owner acme --repo web --pr 123 [--instructions prompts/code-review.md] [--instructions-profile balanced] [--artifact-execution agent]"
+      "Missing required args. Example: --owner acme --repo web --pr 123 [--instructions path/to/instructions.md] [--instructions-profile balanced] [--artifact-execution agent]"
     );
   }
 
@@ -131,15 +135,16 @@ const resolveInstructions = (
     );
   }
 
-  let resolvedPath = resolvePathFromWorkspace(
-    cliInput.workspaceDirectory,
-    DEFAULT_INSTRUCTIONS_PATH
-  );
+  let resolvedPath = resolvePromptPath(DEFAULT_PROMPT_PROFILE);
   if (selectedProfile) {
-    resolvedPath = resolvePathFromWorkspace(
-      cliInput.workspaceDirectory,
-      selectedProfile.instructionsPath
-    );
+    const profilePrompt = selectedProfile.instructionsPrompt;
+    if (!isPromptProfile(profilePrompt)) {
+      throw new Error(
+        `Unsupported instructionsPrompt '${profilePrompt}'. Supported values: balanced, styling, security.`
+      );
+    }
+
+    resolvedPath = resolvePromptPath(profilePrompt);
   }
   if (cliInput.instructionsPath) {
     resolvedPath = resolvePathFromWorkspace(
