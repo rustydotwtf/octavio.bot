@@ -6,7 +6,7 @@
       "name": "octavio-review",
       "dependencies": {
         "@ai-sdk/gateway": "^3.0.52",
-        "@opencode-ai/sdk": "^1.2.9",
+        "@opencode-ai/sdk": "^1.2.10",
         "ai": "^6.0.94",
         "zod": "^4.1.12",
       },
@@ -32,12 +32,9 @@
     "packages/agent-code-review": {
       "name": "@octavio/agent-code-review",
       "dependencies": {
-        "@octavio/agent-runtime": "workspace:*",
         "@octavio/config": "workspace:*",
         "@octavio/github-review": "workspace:*",
         "@octavio/opencode-runner": "workspace:*",
-        "ai": "^6.0.94",
-        "zod": "^4.1.12",
       },
     },
     "packages/agent-runtime": {
@@ -59,7 +56,7 @@
     "packages/opencode-runner": {
       "name": "@octavio/opencode-runner",
       "dependencies": {
-        "@opencode-ai/sdk": "^1.2.9",
+        "@opencode-ai/sdk": "^1.2.10",
       },
     },
   },
@@ -86,7 +83,7 @@
 
     "@octavio/review-bot-cli": ["@octavio/review-bot-cli@workspace:apps/review-bot-cli"],
 
-    "@opencode-ai/sdk": ["@opencode-ai/sdk@1.2.9", "", {}, "sha512-/CYOxGN93q1B/Piog2nXB1GlAs5MZJ0PvY0lhpvSxdKmXtm5o9qX5poZZRTWCUhhuJfzHZ9Ute3ojwpen7s7Rw=="],
+    "@opencode-ai/sdk": ["@opencode-ai/sdk@1.2.10", "", {}, "sha512-SyXcVqry2hitPVvQtvXOhqsWyFhSycG/+LTLYXrcq8AFmd9FR7dyBSDB3f5Ol6IPkYOegk8P2Eg2kKPNSNiKGw=="],
 
     "@opentelemetry/api": ["@opentelemetry/api@1.9.0", "", {}, "sha512-3giAOQvZiH5F9bMlMiv8+GSPMeqg0dbaeo58/0SlA9sxSqZhnUtxzX9/2FzyhS9sWQf5S0GJE0AKBrFqjpeYcg=="],
 

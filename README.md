@@ -24,10 +24,16 @@ Create `.env` with:
 
 ```bash
 GITHUB_TOKEN=...
-OPENCODE_MODEL=openai/gpt-5
 OPENCODE_HOSTNAME=127.0.0.1
 OPENCODE_PORT=4096
+# OPENCODE_MODEL=... (optional; if omitted, OpenCode default model is used)
+# OPENCODE_API_KEY=... (required for OpenCode Zen in CI)
 ```
+
+For free OpenCode Zen models, use one of:
+
+- `opencode/minimax-m2.5-free`
+- `opencode/glm-5-free`
 
 ## Local Run
 

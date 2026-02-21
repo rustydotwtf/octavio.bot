@@ -7,6 +7,7 @@ on:
 permissions:
   actions: read
   contents: read
+  pull-requests: read
 
 jobs:
   review:
@@ -22,6 +23,27 @@ jobs:
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
+
+      - name: Install OpenCode CLI (best effort)
+        continue-on-error: true
+        run: |
+          curl --retry 5 --retry-delay 2 --retry-all-errors -fsSL https://opencode.ai/install | bash
+          if [ -d "$HOME/.opencode/bin" ]; then
+            echo "$HOME/.opencode/bin" >> "$GITHUB_PATH"
+          fi
+          if [ -d "$HOME/.local/bin" ]; then
+            echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          fi
+
+      - name: Verify OpenCode CLI
+        run: |
+          if command -v opencode > /dev/null; then
+            opencode --version
+          elif [ -x "$HOME/.opencode/bin/opencode" ]; then
+            "$HOME/.opencode/bin/opencode" --version
+          else
+            echo "OpenCode CLI was not found after install; continuing because SDK path is used by the review runner."
+          fi
 
       - name: Locate previous findings artifact
         id: previous-artifact
@@ -92,8 +114,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
           OPENCODE_HOSTNAME: ${{ vars.OPENCODE_HOSTNAME || '127.0.0.1' }}
-          OPENCODE_MODEL: ${{ vars.OPENCODE_MODEL || 'openai/gpt-5' }}
+          OPENCODE_MODEL: ${{ vars.OPENCODE_MODEL || 'opencode/minimax-m2.5-free' }}
           OPENCODE_PORT: ${{ vars.OPENCODE_PORT || '4096' }}
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
         run: |
           mkdir -p artifacts
           PREVIOUS_ARGS=""

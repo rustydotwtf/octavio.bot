@@ -3,7 +3,7 @@ import { z } from "zod";
 const envSchema = z.object({
   GITHUB_TOKEN: z.string().min(1, "GITHUB_TOKEN is required"),
   OPENCODE_HOSTNAME: z.string().default("127.0.0.1"),
-  OPENCODE_MODEL: z.string().default("openai/gpt-5"),
+  OPENCODE_MODEL: z.string().optional(),
   OPENCODE_PORT: z.coerce.number().int().positive().default(4096),
 });
 
