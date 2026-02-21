@@ -4,6 +4,12 @@ AGENTS.md is a living guide for agents working in this repo. Edit it freely.
 
 If you discover a mismatch between this file and the actual project (conventions, commands, structure, expectations), update AGENTS.md as part of your change.
 
+Do not only append. Prune outdated guidance aggressively so this file stays representative of the current repository, not historical decisions.
+
+When AGENTS.md and README overlap, keep both in sync in the same change. Remove or rewrite stale sections rather than preserving contradictory text.
+
+Treat AGENTS.md as producer-focused guidance (for maintainers/agents) and README as consumer-focused guidance (for users of the CLI/packages). Update each document for its audience whenever behavior, package boundaries, commands, or outputs change.
+
 As the project grows, add AGENTS.md files to folders that need extra context. These files are auto-loaded when that folder is explored.
 
 ---
@@ -26,11 +32,27 @@ Oxlint + Oxfmt (the underlying engine) provides robust linting and formatting. M
 
 Write code that is **accessible, performant, type-safe, and maintainable**. Focus on clarity and explicit intent over brevity.
 
+### Product Posture
+
+- Treat this repository as a development playground for building reusable agent/tooling packages, not a legacy compatibility surface.
+- Optimize for clean package boundaries, code reuse, and separation of concerns across workspace packages.
+- Do not keep speculative extension points "just in case". Add abstractions only when there are at least two real call sites or an active near-term need.
+- Prefer simple, composable APIs that are easy to rename/refactor over wide, compatibility-heavy surfaces.
+
+### Package Boundary & Publishing Posture
+
+- Be explicit about package intent: either publishable library package or internal workspace implementation detail.
+- Default to internal (`private: true`) unless there is a concrete plan to publish and support external consumers.
+- Promote to publishable only when the API is intentionally designed, documented, and versioned.
+- Keep apps as orchestration entrypoints and packages as reusable units; do not split into a package if there is only one call site and no near-term reuse.
+- When introducing a new package, define ownership expectations in its README/AGENTS context (what is stable API vs refactor-friendly internals).
+
 ### Compatibility Posture
 
 - Do not add backward-compatibility paths, shims, aliases, dual-read logic, or legacy imports unless explicitly requested for a specific migration.
 - Prefer replacing old behavior outright instead of preserving multiple historical formats.
 - If an old path still exists, remove it and update callers/tests/docs in the same change.
+- Reusability is encouraged, but compatibility layers are not: share code through small focused modules, not through fallbacks.
 
 ### Type Safety & Explicitness
 
@@ -137,6 +159,13 @@ Oxlint + Oxfmt's linter will catch most issues automatically. Focus your attenti
 5. **User experience** - Accessibility, performance, and usability considerations
 6. **Documentation** - Add comments for complex logic, but prefer self-documenting code
 
+## Documentation Ownership
+
+- Update `README.md` when changes affect how consumers install, configure, run, or integrate the tooling.
+- Update `AGENTS.md` when changes affect engineering conventions, architecture posture, package boundaries, or agent workflow expectations.
+- If a change affects both audiences, update both files in the same PR.
+- Prefer deleting stale documentation over keeping historical notes that no longer match current behavior.
+
 ---
 
 Most formatting and common issues are automatically fixed by Oxlint + Oxfmt. Run `bun x ultracite fix` before committing to ensure compliance.
@@ -153,6 +182,10 @@ This repository now uses a Bun workspace monorepo:
 - `packages/github-review` - GitHub REST helpers for PR metadata and changed files
 - `packages/agent-code-review` - report parsing and instruction-driven policy evaluation
 - `packages/prompts` - publishable prompt package (`@octavio.bot/prompts`) and helper utilities
+
+Notes:
+
+- Package directories may be created for experimentation before implementation. If a package is empty or unused, remove it instead of keeping placeholders.
 
 ### Common Commands
 
@@ -180,3 +213,7 @@ This repository now uses a Bun workspace monorepo:
 - Policy resolution order: profile `policy.failOn`, then instructions frontmatter `policy.fail_on`
 - Policy mode is fail-closed: missing/empty/invalid policy configuration is an error
 - GitHub workflow runs a profile matrix (`balanced`, `styling`, `security`) with `max-parallel: 1`; each matrix job sets `OCTAVIO_INSTRUCTIONS_PROFILE` to the active profile
+
+## Linked Context
+
+- @README.md
