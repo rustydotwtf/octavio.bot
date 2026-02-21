@@ -243,6 +243,26 @@ const truncateForLogs = (value: string): string =>
     ? `${value.slice(0, REPORT_LOG_MAX_CHARS)}\n...truncated...`
     : value;
 
+const ensureBinaryDirectoryOnPath = (binaryPath: string): void => {
+  const directoryEnd = binaryPath.lastIndexOf("/");
+  if (directoryEnd <= 0) {
+    return;
+  }
+
+  const directory = binaryPath.slice(0, directoryEnd);
+  const currentPath = process.env.PATH ?? "";
+  const pathEntries = currentPath
+    .split(":")
+    .filter((entry) => entry.length > 0);
+  if (pathEntries.includes(directory)) {
+    return;
+  }
+
+  process.env.PATH =
+    currentPath.length > 0 ? `${directory}:${currentPath}` : directory;
+  process.stdout.write(`Added ${directory} to PATH for this process.\n`);
+};
+
 const knownOpenCodePaths = (): string[] => {
   const home = process.env.HOME;
   return [
@@ -326,6 +346,7 @@ const ensureOpenCodeInstalled = async (
 ): Promise<OpenCodeInstallResult> => {
   const detectedBeforeInstall = await detectOpenCode();
   if (detectedBeforeInstall) {
+    ensureBinaryDirectoryOnPath(detectedBeforeInstall.path);
     process.stdout.write(
       `OpenCode detected at ${detectedBeforeInstall.path} (${detectedBeforeInstall.version}).\n`
     );
@@ -358,6 +379,7 @@ const ensureOpenCodeInstalled = async (
   process.stdout.write(
     `OpenCode installed at ${detectedAfterInstall.path} (${detectedAfterInstall.version}).\n`
   );
+  ensureBinaryDirectoryOnPath(detectedAfterInstall.path);
   return detectedAfterInstall;
 };
 
