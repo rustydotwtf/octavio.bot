@@ -114,8 +114,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
           OPENCODE_HOSTNAME: ${{ vars.OPENCODE_HOSTNAME || '127.0.0.1' }}
-          OPENCODE_MODEL: ${{ vars.OPENCODE_MODEL }}
+          OPENCODE_MODEL: ${{ vars.OPENCODE_MODEL || 'opencode/minimax-m2.5-free' }}
           OPENCODE_PORT: ${{ vars.OPENCODE_PORT || '4096' }}
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
         run: |
           mkdir -p artifacts
           PREVIOUS_ARGS=""

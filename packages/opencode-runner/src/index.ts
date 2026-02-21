@@ -30,7 +30,16 @@ interface OpenCodeInstance {
 }
 
 interface Config {
+  enabled_providers?: string[];
   model?: string;
+  provider?: {
+    opencode?: {
+      options?: {
+        apiKey?: string;
+      };
+    };
+  };
+  small_model?: string;
   permission: {
     bash: Record<string, "allow" | "ask" | "deny">;
     doom_loop: "allow" | "ask" | "deny";
@@ -169,7 +178,10 @@ const safeJsonPreview = (value: unknown): string => {
 };
 
 const buildLockedConfig = (model: string | undefined): Config => {
+  const zenApiKey = process.env.OPENCODE_API_KEY;
+
   const config: Config = {
+    enabled_providers: ["opencode"],
     permission: {
       bash: {
         "*": "deny",
@@ -190,6 +202,17 @@ const buildLockedConfig = (model: string | undefined): Config => {
 
   if (model && model.trim().length > 0) {
     config.model = model;
+    config.small_model = model;
+  }
+
+  if (zenApiKey && zenApiKey.trim().length > 0) {
+    config.provider = {
+      opencode: {
+        options: {
+          apiKey: zenApiKey,
+        },
+      },
+    };
   }
 
   return config;

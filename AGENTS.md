@@ -157,7 +157,7 @@ This repository now uses a Bun workspace monorepo:
 
 ### Runtime Expectations
 
-- `.env` should include `GITHUB_TOKEN` and OpenCode connection settings (`OPENCODE_HOSTNAME`, `OPENCODE_PORT`); `OPENCODE_MODEL` is optional
+- `.env` should include `GITHUB_TOKEN`, OpenCode connection settings (`OPENCODE_HOSTNAME`, `OPENCODE_PORT`), and `OPENCODE_API_KEY` for OpenCode Zen; `OPENCODE_MODEL` is optional
 - The OpenCode phase is configured with `edit: deny` and `external_directory: deny`
 - Keep OpenCode prompts constrained to the provided workspace directory
 - Fail policy is configured in the instructions markdown frontmatter (`policy.fail_on`)
