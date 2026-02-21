@@ -14,8 +14,9 @@ Prioritize findings that are:
 
 1. externally exploitable or privilege escalating,
 2. likely to leak secrets, tokens, PII, or internal metadata,
-3. missing validation, authorization, or integrity checks,
-4. introducing insecure cryptography, transport, or storage patterns.
+3. likely to expose identifying or environment-specific traces that can deanonymize contributors,
+4. missing validation, authorization, or integrity checks,
+5. introducing insecure cryptography, transport, or storage patterns.
 
 Treat threat-model relevance as required context: report issues that materially increase risk in this repository's runtime paths.
 
