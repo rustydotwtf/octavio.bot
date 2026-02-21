@@ -383,3 +383,6 @@ try {
   process.stderr.write(`review-bot failed: ${message}\n`);
   process.exitCode = 1;
 }
+
+await Bun.sleep(0);
+process.exit(process.exitCode ?? 0);
