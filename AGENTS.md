@@ -187,6 +187,7 @@ Notes:
 
 - `packages/*` is the canonical workspace package boundary. Do not keep placeholder package directories.
 - Every package directory must contain a tracked `package.json` and source files. If a package is empty or unused, delete the directory.
+- App-specific contributor guidance should live in per-app `AGENTS.md` files (for example `apps/review-bot-cli/AGENTS.md`).
 
 ### Common Commands
 
@@ -221,3 +222,4 @@ Notes:
 ## Linked Context
 
 - @README.md
+- @apps/review-bot-cli/README.md
