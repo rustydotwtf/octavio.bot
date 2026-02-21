@@ -1,0 +1,209 @@
+import { resolvePathFromWorkspace } from "@octavio.bot/config";
+
+type ScaffoldStatus = "created" | "overwritten" | "skipped";
+
+interface ScaffoldPlan {
+  contents: string;
+  relativePath: string;
+}
+
+export interface ScaffoldResult {
+  relativePath: string;
+  status: ScaffoldStatus;
+}
+
+const DEFAULT_REVIEW_CONFIG = {
+  defaultProfile: "balanced",
+  profiles: {
+    balanced: {
+      artifactExecution: "agent",
+      artifactSchema: {
+        artifactDir: "artifacts",
+        confidenceFile: "confidence.json",
+        maxAttempts: 2,
+        reviewFile: "review.md",
+      },
+      instructionsPrompt: "balanced",
+      policy: {
+        failOn: ["new:high", "new:critical"],
+      },
+    },
+    security: {
+      artifactExecution: "agent",
+      artifactSchema: {
+        artifactDir: "artifacts",
+        confidenceFile: "confidence.json",
+        maxAttempts: 2,
+        reviewFile: "review.md",
+      },
+      instructionsPrompt: "security",
+      policy: {
+        failOn: ["new:medium", "new:high", "new:critical"],
+      },
+    },
+    styling: {
+      artifactExecution: "agent",
+      artifactSchema: {
+        artifactDir: "artifacts",
+        confidenceFile: "confidence.json",
+        maxAttempts: 2,
+        reviewFile: "review.md",
+      },
+      instructionsPrompt: "styling",
+      policy: {
+        failOn: ["new:high", "new:critical"],
+      },
+    },
+  },
+} as const;
+
+const DEFAULT_REVIEW_WORKFLOW = `name: review-check
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+concurrency:
+  group: review-check-pr-\${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  actions: read
+  contents: read
+  pull-requests: read
+
+jobs:
+  review:
+    name: review (\${{ matrix.profile }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        profile: [balanced, styling, security]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Run review check
+        timeout-minutes: 8
+        env:
+          GITHUB_TOKEN: \${{ github.token }}
+          OPENCODE_HOSTNAME: \${{ vars.OPENCODE_HOSTNAME || '127.0.0.1' }}
+          OCTAVIO_INSTRUCTIONS_PROFILE: \${{ matrix.profile }}
+          OPENCODE_MODEL: opencode/minimax-m2.5-free
+          OPENCODE_PORT: \${{ vars.OPENCODE_PORT || '4096' }}
+          OPENCODE_API_KEY: \${{ secrets.OPENCODE_API_KEY || '' }}
+        run: |
+          mkdir -p artifacts
+          PROFILE_ARGS=""
+          if [ -n "$OCTAVIO_INSTRUCTIONS_PROFILE" ]; then
+            PROFILE_ARGS="--instructions-profile $OCTAVIO_INSTRUCTIONS_PROFILE"
+          fi
+          bunx --bun @octavio.bot/review@latest review \\
+            --owner "\${{ github.repository_owner }}" \\
+            --repo "\${{ github.event.repository.name }}" \\
+            --pr "\${{ github.event.pull_request.number }}" \\
+            $PROFILE_ARGS \\
+            --install-opencode \\
+            --workdir . \\
+            --report-output artifacts/review.md \\
+            --findings-output artifacts/confidence.json \\
+            --result-output artifacts/result.json
+
+      - name: Publish job summary
+        if: always()
+        env:
+          OCTAVIO_INSTRUCTIONS_PROFILE: \${{ matrix.profile }}
+        run: |
+          if [ -f artifacts/result.json ]; then
+            bun -e 'const result = await Bun.file("artifacts/result.json").json();
+            const lines = [
+              "## Octavio Review",
+              "",
+              "- Profile: " + (process.env.OCTAVIO_INSTRUCTIONS_PROFILE || "balanced"),
+              "- Blocking findings: " + (result.hasBlockingFindings ? "yes" : "no"),
+              "- Policy source: " + result.policy.source,
+              "- Policy rules: " + (result.policy.failOnRules.join(", ") || "none"),
+              "- Matched rules: " + (result.policy.matchedRules.join(", ") || "none"),
+              "",
+              "### Summary",
+              result.summary,
+            ];
+            await Bun.write(Bun.stdout, lines.join("\\n") + "\\n");' >> "$GITHUB_STEP_SUMMARY"
+          else
+            printf '## Octavio Review\n\nRun failed before report generation.\n\nTroubleshooting:\n- Confirm workflow env uses OPENCODE_MODEL=opencode/minimax-m2.5-free.\n- If you switch to a non-free model, set repository secret OPENCODE_API_KEY.\n- Check run logs for OpenCode connection/auth/model errors.\n' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload report artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: octavio-review-report-pr-\${{ github.event.pull_request.number }}-\${{ matrix.profile }}
+          path: artifacts/review.md
+          if-no-files-found: ignore
+
+      - name: Upload confidence artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: octavio-confidence-pr-\${{ github.event.pull_request.number }}-\${{ matrix.profile }}
+          path: artifacts/confidence.json
+          if-no-files-found: ignore
+
+      - name: Upload result artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: octavio-result-pr-\${{ github.event.pull_request.number }}-\${{ matrix.profile }}
+          path: artifacts/result.json
+          if-no-files-found: ignore
+`;
+
+const scaffoldPlans = (): ScaffoldPlan[] => [
+  {
+    contents: `${JSON.stringify(DEFAULT_REVIEW_CONFIG, null, 2)}\n`,
+    relativePath: ".octavio/review.config.json",
+  },
+  {
+    contents: DEFAULT_REVIEW_WORKFLOW,
+    relativePath: ".github/workflows/review-check.yml",
+  },
+];
+
+export const scaffoldReviewSetup = async (
+  workspaceDirectory: string,
+  force: boolean
+): Promise<ScaffoldResult[]> => {
+  const results: ScaffoldResult[] = [];
+
+  for (const plan of scaffoldPlans()) {
+    const absolutePath = resolvePathFromWorkspace(
+      workspaceDirectory,
+      plan.relativePath
+    );
+    const file = Bun.file(absolutePath);
+    const exists = await file.exists();
+    if (exists && !force) {
+      results.push({
+        relativePath: plan.relativePath,
+        status: "skipped",
+      });
+      continue;
+    }
+
+    await Bun.write(absolutePath, plan.contents);
+    results.push({
+      relativePath: plan.relativePath,
+      status: exists ? "overwritten" : "created",
+    });
+  }
+
+  return results;
+};

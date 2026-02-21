@@ -47,6 +47,7 @@ Useful workflow commands:
 
 - Local review CLI source run: `bun run review-bot ...`
 - Build publishable review CLI: `bun run review-cli:build`
+- Initialize Octavio files in any repo: `bunx --bun @octavio.bot/review@latest init --workdir .`
 
 ## CI
 
