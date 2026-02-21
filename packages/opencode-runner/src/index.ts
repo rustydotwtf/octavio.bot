@@ -12,7 +12,13 @@ interface OpenCodeClient {
       body: { parts: [{ text: string; type: "text" }] };
       path: { id: string };
       query: { directory: string };
-    }): Promise<{ data?: unknown }>;
+      responseStyle?: "data" | "fields";
+      throwOnError?: boolean;
+    }): Promise<{
+      data?: unknown;
+      error?: unknown;
+      response?: { status?: number };
+    }>;
   };
 }
 
@@ -24,7 +30,7 @@ interface OpenCodeInstance {
 }
 
 interface Config {
-  model: string;
+  model?: string;
   permission: {
     bash: Record<string, "allow" | "ask" | "deny">;
     doom_loop: "allow" | "ask" | "deny";
@@ -44,7 +50,7 @@ interface OpenCodeModule {
 
 export interface OpenCodeRunnerOptions {
   hostname: string;
-  model: string;
+  model?: string;
   port: number;
   workspaceDirectory: string;
 }
@@ -162,25 +168,32 @@ const safeJsonPreview = (value: unknown): string => {
   }
 };
 
-const buildLockedConfig = (model: string): Config => ({
-  model,
-  permission: {
-    bash: {
-      "*": "deny",
-      "git diff*": "allow",
-      "git log*": "allow",
-      "git show*": "allow",
-      "git status*": "allow",
-      "ls*": "allow",
-      "pwd*": "allow",
-      "rg*": "allow",
+const buildLockedConfig = (model: string | undefined): Config => {
+  const config: Config = {
+    permission: {
+      bash: {
+        "*": "deny",
+        "git diff*": "allow",
+        "git log*": "allow",
+        "git show*": "allow",
+        "git status*": "allow",
+        "ls*": "allow",
+        "pwd*": "allow",
+        "rg*": "allow",
+      },
+      doom_loop: "deny",
+      edit: "deny",
+      external_directory: "deny",
+      webfetch: "deny",
     },
-    doom_loop: "deny",
-    edit: "deny",
-    external_directory: "deny",
-    webfetch: "deny",
-  },
-});
+  };
+
+  if (model && model.trim().length > 0) {
+    config.model = model;
+  }
+
+  return config;
+};
 
 export class OpenCodeReportRunner {
   private readonly options: OpenCodeRunnerOptions;
@@ -220,7 +233,9 @@ export class OpenCodeReportRunner {
         },
         path: { id: sessionId },
         query: { directory: this.options.workspaceDirectory },
+        throwOnError: true,
       });
+
       if (!response.data) {
         throw new Error("OpenCode did not return a response payload.");
       }
