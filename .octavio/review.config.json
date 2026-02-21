@@ -28,6 +28,20 @@
       "policy": {
         "failOn": ["new:high", "new:critical"]
       }
+    },
+    "security": {
+      "artifactExecution": "agent",
+      "artifactSchema": {
+        "artifactDir": "artifacts",
+        "confidenceFile": "confidence.json",
+        "maxAttempts": 2,
+        "reviewFile": "review.md",
+        "validatorCommand": "bun run validate-artifacts --dir artifacts"
+      },
+      "instructionsPath": "prompts/security-review.md",
+      "policy": {
+        "failOn": ["new:medium", "new:high", "new:critical"]
+      }
     }
   }
 }
