@@ -63,6 +63,12 @@ bun install
 bun run review-bot --owner acme --repo web --pr 123 --instructions-profile balanced --workdir .
 ```
 
+Build and packaging notes:
+
+- `bun run review-cli:build` builds the CLI bundle and syncs prompt markdown into `apps/review-bot-cli/prompts/`
+- `bun run sync` from repo root runs the CLI `sync` task through Turborepo and refreshes generated prompts
+- Prompt source-of-truth lives in `packages/prompts/prompts/*.md`; the app-level `prompts/` directory is generated for publishing
+
 Optional flags:
 
 - `--report-output path/to/review.md`

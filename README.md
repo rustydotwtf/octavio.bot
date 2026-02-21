@@ -19,6 +19,11 @@ Current shared packages:
 - `packages/agent-code-review` - review orchestration and policy evaluation
 - `packages/prompts` - publishable prompt package (`@octavio.bot/prompts`)
 
+Prompt authoring and packaging:
+
+- Author prompt markdown only in `packages/prompts/prompts/*.md`
+- `apps/review-bot-cli/prompts/` is generated during `build`/`prepack` for npm tarballs
+
 ## App Documentation
 
 App-specific setup, usage, and behavior live with each app.
@@ -29,10 +34,14 @@ App-specific setup, usage, and behavior live with each app.
 
 ```bash
 bun install
+bun run sync
 bun run check
 bun run build
 bun run test
 ```
+
+Root `check`, `build`, and `test` commands are orchestrated via Turborepo (`turbo run ...`).
+Root `sync` runs workspace sync tasks (currently prompt bundling for the review CLI).
 
 Useful workflow commands:
 
@@ -41,6 +50,6 @@ Useful workflow commands:
 
 ## CI
 
-- `.github/workflows/ci.yml` runs workspace lint/build/test and a published CLI smoke check
+- `.github/workflows/ci.yml` runs `bun run sync` and fails on tracked drift, then runs workspace lint/build/test and a published CLI smoke check
 - `.github/workflows/review-check.yml` runs PR review profiles via `bunx --bun @octavio.bot/review@latest`
 - `.github/workflows/publish-review.yml` is manual (`workflow_dispatch`) and publishes `@octavio.bot/review` from `apps/review-bot-cli`
