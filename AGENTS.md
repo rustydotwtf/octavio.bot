@@ -194,6 +194,7 @@ Notes:
 - Run local source bot: `bun run review-bot --owner <owner> --repo <repo> --pr <number> [--instructions /absolute/or/workspace/path.md] [--instructions-profile <name>] [--artifact-execution agent|host] [--install-opencode] --workdir .`
 - Run published CLI: `bunx --bun @octavio.bot/review@latest review --owner <owner> --repo <repo> --pr <number> --workdir .`
 - Doctor command: `bunx --bun @octavio.bot/review@latest doctor`
+- Run workspace sync tasks: `bun run sync`
 - Build publishable CLI dist: `bun run review-cli:build`
 - Run GitHub review workflow: `.github/workflows/review-check.yml` on pull requests
 - Run manual npm publish workflow: `.github/workflows/publish-review.yml` (`workflow_dispatch`, publishes from `apps/review-bot-cli`)
@@ -203,6 +204,7 @@ Notes:
 Task orchestration notes:
 
 - Root `check`, `build`, and `test` run through Turborepo (`turbo run ...`) and then apply root-level checks where needed.
+- Root `sync` runs Turborepo `sync` tasks across apps/packages; use this for generated workspace artifacts that should stay in sync.
 - Prompt markdown source-of-truth is `packages/prompts/prompts/*.md`; `apps/review-bot-cli/prompts/` is generated during CLI build/prepack for published tarballs.
 
 ### Runtime Expectations

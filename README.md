@@ -34,12 +34,14 @@ App-specific setup, usage, and behavior live with each app.
 
 ```bash
 bun install
+bun run sync
 bun run check
 bun run build
 bun run test
 ```
 
 Root `check`, `build`, and `test` commands are orchestrated via Turborepo (`turbo run ...`).
+Root `sync` runs workspace sync tasks (currently prompt bundling for the review CLI).
 
 Useful workflow commands:
 

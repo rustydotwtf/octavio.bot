@@ -11,6 +11,7 @@
     "ci": "bun run check && bun run build && bun run test",
     "review-bot": "bun run apps/review-bot-cli/src/index.ts",
     "review-cli:build": "bun run --cwd apps/review-bot-cli build",
+    "sync": "turbo run sync --filter=./apps/* --filter=./packages/*",
     "check": "turbo run check --filter=./apps/* --filter=./packages/* && ultracite check",
     "fix": "ultracite fix",
     "prepare": "lefthook install",

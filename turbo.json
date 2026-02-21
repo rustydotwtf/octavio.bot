@@ -5,6 +5,9 @@
       "dependsOn": ["^build"],
       "outputs": ["dist/**", "prompts/**"]
     },
+    "sync": {
+      "outputs": ["prompts/**"]
+    },
     "check": {
       "dependsOn": ["^check"],
       "outputs": []
