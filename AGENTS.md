@@ -165,9 +165,9 @@ This repository now uses a Bun workspace monorepo:
 
 ### Instruction Profiles
 
-- Optional repo config file: `.octavio/review.config.json`
+- Repo config file: `.octavio/review.config.json` (committed in this repository)
 - CLI supports `--instructions-profile <name>` to select a profile
 - Profiles can define `artifactExecution` and `artifactSchema` (`artifactDir`, `reviewFile`, `confidenceFile`, `validatorCommand`, `maxAttempts`)
 - Instruction resolution order: explicit `--instructions`, then profile, then `defaultProfile`, then `prompts/code-review.md`
 - Policy resolution order: profile `policy.failOn`, then instructions frontmatter `policy.fail_on`, then fail-open fallback
-- GitHub workflow can set `OCTAVIO_INSTRUCTIONS_PROFILE` repo variable to choose profile in CI
+- GitHub workflow runs a profile matrix (`balanced`, `styling`, `security`) with `max-parallel: 1`; each matrix job sets `OCTAVIO_INSTRUCTIONS_PROFILE` to the active profile
