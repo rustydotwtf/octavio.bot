@@ -62,8 +62,7 @@ jobs:
         working-directory: apps/review-bot-cli
         run: |
           npm version ${{ inputs.version }} --workspaces=false -m "Release %s"
-          NEW_VERSION="$(node -p 'require("./package.json").version')"
-          echo "NEW_VERSION=${NEW_VERSION}" >> "$GITHUB_ENV"
+          node -e 'const v = require("./package.json").version; process.stdout.write(`NEW_VERSION=${v}\n`)' >> "$GITHUB_ENV"
 
       - name: Push version bump
         if: inputs.dry_run == false
