@@ -20,14 +20,12 @@ export interface CliInput extends RepoRef {
   findingsOutputPath?: string;
   instructionsPath?: string;
   instructionsProfile?: string;
-  previousFindingsPath?: string;
   resultOutputPath?: string;
   workspaceDirectory: string;
   reportOutputPath?: string;
 }
 
-const POLICY_RULE_REGEX =
-  /^(any|new|persisting|resolved):(low|medium|high|critical)$/u;
+const POLICY_RULE_REGEX = /^(any|new):(low|medium|high|critical)$/u;
 
 const artifactExecutionSchema = z.enum(["host", "agent"]);
 const instructionsPromptSchema = z.enum(["balanced", "styling", "security"]);

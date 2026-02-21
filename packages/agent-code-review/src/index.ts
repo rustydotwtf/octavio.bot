@@ -11,7 +11,7 @@ import type {
 } from "@octavio.bot/opencode-runner";
 
 type FindingSeverity = "low" | "medium" | "high" | "critical";
-type PolicyScope = "any" | "new" | "persisting" | "resolved";
+type PolicyScope = "any" | "new";
 
 export interface ReviewFinding {
   fingerprint: string;
@@ -33,41 +33,23 @@ export interface ReviewRunInput {
   artifactSchema: ArtifactSchemaConfig;
   instructionsMarkdown: string;
   policyFailOnRules?: string[];
-  previousFindings?: ReviewFinding[];
   repo: RepoRef;
-}
-
-export interface FindingsComparison {
-  newFindings: ReviewFinding[];
-  persistingFindings: ReviewFinding[];
-  resolvedFindings: ReviewFinding[];
 }
 
 export interface PolicyEvaluation {
   failOnRules: string[];
   matchedRules: string[];
   shouldFail: boolean;
-  source: "config" | "frontmatter" | "fallback";
-  warnings: string[];
+  source: "config" | "frontmatter";
 }
 
 export interface ReviewRunResult {
-  comparison: FindingsComparison;
   confidenceJson: string;
   hasBlockingFindings: boolean;
   findings: ReviewFinding[];
   policy: PolicyEvaluation;
   reportMarkdown: string;
   summary: string;
-}
-
-interface ReportFinding {
-  comment: string;
-  id: string;
-  line: number;
-  path: string;
-  severity: string;
-  title: string;
 }
 
 interface PolicyRule {
@@ -78,8 +60,7 @@ interface PolicyRule {
 
 interface PolicyParseResult {
   rules: PolicyRule[];
-  source: "config" | "frontmatter" | "fallback";
-  warnings: string[];
+  source: "config" | "frontmatter";
 }
 
 const VALID_SEVERITIES = new Set<FindingSeverity>([
@@ -94,12 +75,6 @@ const FRONTMATTER_REGEX = /^---\s*\n([\s\S]*?)\n---\s*(?:\n|$)/u;
 const writeWorkflowLog = (message: string): void => {
   process.stdout.write(`[review-workflow] ${message}\n`);
 };
-
-const stripCodeFence = (jsonBlock: string): string =>
-  jsonBlock
-    .replace(/^```json\s*/u, "")
-    .replace(/```$/u, "")
-    .trim();
 
 const normalizeSeverity = (severity: string): FindingSeverity | null => {
   const normalized = severity.trim().toLowerCase();
@@ -123,120 +98,44 @@ const computeFingerprint = (finding: {
     finding.title.trim().toLowerCase(),
   ].join("|");
 
-const parseFindingsFromReport = (reportMarkdown: string): ReviewFinding[] => {
-  const blockMatch = reportMarkdown.match(/```json[\s\S]*?```/u);
-  if (!blockMatch) {
-    return [];
-  }
-
-  try {
-    const parsed = JSON.parse(stripCodeFence(blockMatch[0])) as {
-      findings?: ReportFinding[];
-    };
-
-    const rawFindings = parsed.findings ?? [];
-    const findings: ReviewFinding[] = [];
-
-    for (const finding of rawFindings) {
-      const severity = normalizeSeverity(finding.severity);
-      if (
-        !severity ||
-        !finding.id ||
-        !finding.path ||
-        !Number.isInteger(finding.line) ||
-        finding.line <= 0
-      ) {
-        continue;
-      }
-
-      findings.push({
-        comment: finding.comment,
-        fingerprint: computeFingerprint({
-          line: finding.line,
-          path: finding.path,
-          severity,
-          title: finding.title,
-        }),
-        id: finding.id,
-        line: finding.line,
-        path: finding.path,
-        severity,
-        title: finding.title,
-      });
-    }
-
-    return findings;
-  } catch {
-    return [];
-  }
-};
-
 const parseFindingsFromRunner = (
   report: GenerateReportResult
 ): ReviewFinding[] => {
-  if (report.usedStructuredOutput) {
-    const findings: ReviewFinding[] = [];
+  if (!report.usedStructuredOutput) {
+    throw new Error("Review runner must return structured findings output.");
+  }
 
-    for (const finding of report.structuredFindings) {
-      const severity = normalizeSeverity(finding.severity);
-      if (
-        !severity ||
-        !finding.id ||
-        !finding.path ||
-        !Number.isInteger(finding.line) ||
-        finding.line <= 0
-      ) {
-        continue;
-      }
+  const findings: ReviewFinding[] = [];
 
-      findings.push({
-        comment: finding.comment,
-        fingerprint: computeFingerprint({
-          line: finding.line,
-          path: finding.path,
-          severity,
-          title: finding.title,
-        }),
-        id: finding.id,
+  for (const finding of report.structuredFindings) {
+    const severity = normalizeSeverity(finding.severity);
+    if (
+      !severity ||
+      !finding.id ||
+      !finding.path ||
+      !Number.isInteger(finding.line) ||
+      finding.line <= 0
+    ) {
+      continue;
+    }
+
+    findings.push({
+      comment: finding.comment,
+      fingerprint: computeFingerprint({
         line: finding.line,
         path: finding.path,
         severity,
         title: finding.title,
-      });
-    }
-
-    return findings;
+      }),
+      id: finding.id,
+      line: finding.line,
+      path: finding.path,
+      severity,
+      title: finding.title,
+    });
   }
 
-  return parseFindingsFromReport(report.reportMarkdown);
-};
-
-const compareFindings = (
-  currentFindings: ReviewFinding[],
-  previousFindings: ReviewFinding[]
-): FindingsComparison => {
-  const previousByFingerprint = new Map(
-    previousFindings.map((finding) => [finding.fingerprint, finding])
-  );
-  const currentByFingerprint = new Map(
-    currentFindings.map((finding) => [finding.fingerprint, finding])
-  );
-
-  const newFindings = currentFindings.filter(
-    (finding) => !previousByFingerprint.has(finding.fingerprint)
-  );
-  const persistingFindings = currentFindings.filter((finding) =>
-    previousByFingerprint.has(finding.fingerprint)
-  );
-  const resolvedFindings = previousFindings.filter(
-    (finding) => !currentByFingerprint.has(finding.fingerprint)
-  );
-
-  return {
-    newFindings,
-    persistingFindings,
-    resolvedFindings,
-  };
+  return findings;
 };
 
 const extractFrontmatter = (instructionsMarkdown: string): string | null => {
@@ -252,8 +151,8 @@ const parseRawPolicyRules = (
   rawRules: string[],
   source: "config" | "frontmatter"
 ): PolicyParseResult => {
-  const warnings: string[] = [];
   const rules: PolicyRule[] = [];
+  const invalidRules: string[] = [];
 
   for (const rawRuleCandidate of rawRules) {
     const rawRule = rawRuleCandidate.trim().toLowerCase();
@@ -262,19 +161,13 @@ const parseRawPolicyRules = (
     }
 
     const [scope, severity] = rawRule.split(":");
-    const isValidScope =
-      scope === "any" ||
-      scope === "new" ||
-      scope === "persisting" ||
-      scope === "resolved";
+    const isValidScope = scope === "any" || scope === "new";
     const isValidSeverity = VALID_SEVERITIES.has(
       (severity ?? "") as FindingSeverity
     );
 
     if (!isValidScope || !isValidSeverity) {
-      warnings.push(
-        `Ignoring unsupported policy rule '${rawRule}'. Supported format: <any|new|persisting|resolved>:<low|medium|high|critical>.`
-      );
+      invalidRules.push(rawRule);
       continue;
     }
 
@@ -285,10 +178,21 @@ const parseRawPolicyRules = (
     });
   }
 
+  if (invalidRules.length > 0) {
+    throw new Error(
+      `Invalid ${source === "config" ? "config policy.failOn" : "instructions policy.fail_on"} rules: ${invalidRules.join(", ")}. Supported format: <any|new>:<low|medium|high|critical>.`
+    );
+  }
+
+  if (rules.length === 0) {
+    throw new Error(
+      `${source === "config" ? "Config policy.failOn" : "Instructions policy.fail_on"} must include at least one valid rule.`
+    );
+  }
+
   return {
     rules,
     source,
-    warnings,
   };
 };
 
@@ -296,31 +200,15 @@ const parsePolicyRulesFromInstructions = (
   instructionsMarkdown: string,
   configFailOnRules: string[] | undefined
 ): PolicyParseResult => {
-  if (configFailOnRules) {
-    const parsedConfigRules = parseRawPolicyRules(configFailOnRules, "config");
-    if (parsedConfigRules.rules.length > 0) {
-      return parsedConfigRules;
-    }
-
-    return {
-      rules: [],
-      source: "fallback",
-      warnings: [
-        ...parsedConfigRules.warnings,
-        "Config policy.failOn did not include any valid rules; using fail-open fallback.",
-      ],
-    };
+  if (configFailOnRules !== undefined) {
+    return parseRawPolicyRules(configFailOnRules, "config");
   }
 
   const frontmatter = extractFrontmatter(instructionsMarkdown);
   if (!frontmatter) {
-    return {
-      rules: [],
-      source: "fallback",
-      warnings: [
-        "No policy frontmatter was found in instructions; using fail-open fallback.",
-      ],
-    };
+    throw new Error(
+      "Instructions must include frontmatter policy.fail_on when config policy.failOn is not set."
+    );
   }
 
   const failOnBlock = frontmatter.match(
@@ -328,13 +216,9 @@ const parsePolicyRulesFromInstructions = (
   );
 
   if (!failOnBlock?.[1]) {
-    return {
-      rules: [],
-      source: "fallback",
-      warnings: [
-        "Instructions frontmatter is present but policy.fail_on is missing; using fail-open fallback.",
-      ],
-    };
+    throw new Error(
+      "Instructions frontmatter must include policy.fail_on when config policy.failOn is not set."
+    );
   }
 
   const extractedRules = [
@@ -342,68 +226,29 @@ const parsePolicyRulesFromInstructions = (
   ]
     .map((match) => match[1])
     .filter(Boolean) as string[];
-  const parsedRules = parseRawPolicyRules(extractedRules, "frontmatter");
-  const { rules } = parsedRules;
-  const warnings = [...parsedRules.warnings];
 
-  if (rules.length === 0) {
-    warnings.push(
-      "No valid policy rules were found in policy.fail_on; using fail-open fallback."
-    );
-    return {
-      rules: [],
-      source: "fallback",
-      warnings,
-    };
-  }
-
-  return {
-    rules,
-    source: "frontmatter",
-    warnings,
-  };
+  return parseRawPolicyRules(extractedRules, "frontmatter");
 };
 
 const findingsForScope = (
-  comparison: FindingsComparison,
   findings: ReviewFinding[],
   scope: PolicyScope
 ): ReviewFinding[] => {
-  if (scope === "new") {
-    return comparison.newFindings;
+  if (scope === "new" || scope === "any") {
+    return findings;
   }
 
-  if (scope === "persisting") {
-    return comparison.persistingFindings;
-  }
-
-  if (scope === "resolved") {
-    return comparison.resolvedFindings;
-  }
-
-  return findings;
+  throw new Error(`Unsupported policy scope '${scope}'.`);
 };
 
 const evaluatePolicy = (
   rules: PolicyRule[],
-  source: "config" | "frontmatter" | "fallback",
-  warnings: string[],
-  findings: ReviewFinding[],
-  comparison: FindingsComparison
+  source: "config" | "frontmatter",
+  findings: ReviewFinding[]
 ): PolicyEvaluation => {
-  if (rules.length === 0) {
-    return {
-      failOnRules: [],
-      matchedRules: [],
-      shouldFail: false,
-      source,
-      warnings,
-    };
-  }
-
   const matchedRules: string[] = [];
   for (const rule of rules) {
-    const scopedFindings = findingsForScope(comparison, findings, rule.scope);
+    const scopedFindings = findingsForScope(findings, rule.scope);
     const hasMatch = scopedFindings.some(
       (finding) => finding.severity === rule.severity
     );
@@ -417,7 +262,6 @@ const evaluatePolicy = (
     matchedRules,
     shouldFail: matchedRules.length > 0,
     source,
-    warnings,
   };
 };
 
@@ -495,7 +339,6 @@ export class CodeReviewWorkflow {
 
     const findings = parseFindingsFromRunner(report);
     writeWorkflowLog(`parsed ${findings.length} findings`);
-    const comparison = compareFindings(findings, input.previousFindings ?? []);
     const parsedPolicy = parsePolicyRulesFromInstructions(
       input.instructionsMarkdown,
       input.policyFailOnRules
@@ -503,13 +346,10 @@ export class CodeReviewWorkflow {
     const policy = evaluatePolicy(
       parsedPolicy.rules,
       parsedPolicy.source,
-      parsedPolicy.warnings,
-      findings,
-      comparison
+      findings
     );
 
     return {
-      comparison,
       confidenceJson: report.confidenceJson,
       findings,
       hasBlockingFindings: policy.shouldFail,

@@ -7,8 +7,7 @@ CI-first PR review gate that returns a GitHub check result (pass/fail) and uploa
 1. Builds PR context from changed files.
 2. Instructs OpenCode to write artifacts directly to disk using an Artifact Schema.
 3. Validates artifacts with `bun run validate-artifacts`.
-4. Compares current findings to the previous run artifact (`new`, `persisting`, `resolved`).
-5. Applies fail policy from profile config or instruction frontmatter.
+4. Applies fail policy from profile config or instruction frontmatter.
 
 No GitHub review comments are created or updated.
 
@@ -46,7 +45,6 @@ Optional flags:
 - `--report-output path/to/review.md`
 - `--findings-output path/to/confidence.json`
 - `--result-output path/to/result.json`
-- `--previous-findings path/to/previous-confidence.json`
 - `--instructions-profile balanced`
 - `--artifact-execution agent|host`
 
@@ -61,7 +59,6 @@ Policy resolution order:
 
 1. profile policy from `.octavio/review.config.json` (`policy.failOn`)
 2. instruction frontmatter policy (`policy.fail_on`)
-3. fail-open fallback
 
 ### Optional review config
 
@@ -108,7 +105,7 @@ Policy can be set either in profile config (`policy.failOn`) or in YAML frontmat
 `policy.failOn` semantics:
 
 - Omitted (`undefined`): evaluate frontmatter `policy.fail_on`.
-- Provided but empty (`[]`) or invalid: treat config as selected, then fail-open with warnings.
+- Provided but empty (`[]`) or invalid: error (fail-closed).
 
 Frontmatter example:
 
@@ -121,11 +118,11 @@ policy:
 ---
 ```
 
-Supported scope: `any`, `new`, `persisting`, `resolved`.
+Supported scope: `any`, `new`.
 
 When both are present, profile config wins.
 
-If policy is missing or invalid, the runner uses fail-open fallback and reports warnings in `result.json`.
+If policy is missing or invalid, the runner errors (fail-closed).
 
 ## Artifact Schema
 
@@ -149,7 +146,6 @@ Workflow file: `.github/workflows/review-check.yml`
 
 - Posts a concise summary in the job summary panel.
 - Uploads `review.md`, `confidence.json`, and `result.json` as artifacts.
-- Reuses previous confidence artifact by PR number and profile for comparison.
 - Runs a profile matrix (`balanced`, `styling`, `security`) with `max-parallel: 1` so matrix jobs execute one at a time.
 - Defaults `OPENCODE_MODEL` to `opencode/minimax-m2.5-free` unless overridden by repository variable.
 
@@ -159,5 +155,5 @@ Workflow file: `.github/workflows/review-check.yml`
 - `packages/config` env/config parsing.
 - `packages/opencode-runner` OpenCode report generation with locked permissions.
 - `packages/github-review` GitHub REST helpers for PR metadata and file diffs.
-- `packages/agent-code-review` report parsing, previous-run comparison, and policy evaluation.
+- `packages/agent-code-review` report parsing and policy evaluation.
 - `packages/prompts` publishable prompt package (`@octavio.bot/prompts`).
