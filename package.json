@@ -17,7 +17,7 @@
   },
   "dependencies": {
     "@ai-sdk/gateway": "^3.0.52",
-    "@opencode-ai/sdk": "^1.2.9",
+    "@opencode-ai/sdk": "^1.2.10",
     "ai": "^6.0.94",
     "zod": "^4.1.12"
   },

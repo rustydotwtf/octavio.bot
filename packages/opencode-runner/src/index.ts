@@ -91,8 +91,7 @@ export class OpenCodeReportRunner {
   }
 
   public async generateReport(input: GenerateReportInput): Promise<string> {
-    const sdkModuleName = "@opencode-ai/sdk";
-    const sdk = (await import(sdkModuleName)) as OpenCodeModule;
+    const sdk = (await import("@opencode-ai/sdk")) as OpenCodeModule;
     const opencode = await sdk.createOpencode({
       config: buildLockedConfig(this.options.model),
       hostname: this.options.hostname,
