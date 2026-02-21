@@ -1,5 +1,5 @@
 {
-  "name": "@octavio/opencode-runner",
+  "name": "@octavio.bot/opencode-runner",
   "private": true,
   "type": "module",
   "exports": {

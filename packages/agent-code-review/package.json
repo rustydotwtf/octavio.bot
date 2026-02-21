@@ -1,13 +1,13 @@
 {
-  "name": "@octavio/agent-code-review",
+  "name": "@octavio.bot/agent-code-review",
   "private": true,
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@octavio/config": "workspace:*",
-    "@octavio/github-review": "workspace:*",
-    "@octavio/opencode-runner": "workspace:*"
+    "@octavio.bot/config": "workspace:*",
+    "@octavio.bot/github-review": "workspace:*",
+    "@octavio.bot/opencode-runner": "workspace:*"
   }
 }

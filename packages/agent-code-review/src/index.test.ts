@@ -1,11 +1,11 @@
 import { describe, expect, it } from "bun:test";
 
-import type { GitHubReviewClient } from "@octavio/github-review";
+import type { GitHubReviewClient } from "@octavio.bot/github-review";
 import type {
   GenerateReportInput,
   OpenCodeReportRunner,
   ReportFinding,
-} from "@octavio/opencode-runner";
+} from "@octavio.bot/opencode-runner";
 
 import { CodeReviewWorkflow } from "./index";
 

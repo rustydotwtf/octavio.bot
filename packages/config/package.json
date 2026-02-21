@@ -1,5 +1,5 @@
 {
-  "name": "@octavio/config",
+  "name": "@octavio.bot/config",
   "private": true,
   "type": "module",
   "exports": {

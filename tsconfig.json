@@ -13,10 +13,12 @@
     "baseUrl": ".",
     "paths": {
       "@octavio.bot/prompts": ["packages/prompts/src/index.ts"],
-      "@octavio/agent-code-review": ["packages/agent-code-review/src/index.ts"],
-      "@octavio/config": ["packages/config/src/index.ts"],
-      "@octavio/github-review": ["packages/github-review/src/index.ts"],
-      "@octavio/opencode-runner": ["packages/opencode-runner/src/index.ts"]
+      "@octavio.bot/agent-code-review": [
+        "packages/agent-code-review/src/index.ts"
+      ],
+      "@octavio.bot/config": ["packages/config/src/index.ts"],
+      "@octavio.bot/github-review": ["packages/github-review/src/index.ts"],
+      "@octavio.bot/opencode-runner": ["packages/opencode-runner/src/index.ts"]
     },
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,

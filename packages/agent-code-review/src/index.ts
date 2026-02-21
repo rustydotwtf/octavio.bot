@@ -1,14 +1,14 @@
-import type { RepoRef } from "@octavio/config";
+import type { RepoRef } from "@octavio.bot/config";
 import type {
   GitHubReviewClient,
   PullRequestFile,
-} from "@octavio/github-review";
+} from "@octavio.bot/github-review";
 import type {
   ArtifactExecution,
   ArtifactSchemaConfig,
   GenerateReportResult,
   OpenCodeReportRunner,
-} from "@octavio/opencode-runner";
+} from "@octavio.bot/opencode-runner";
 
 type FindingSeverity = "low" | "medium" | "high" | "critical";
 type PolicyScope = "any" | "new" | "persisting" | "resolved";

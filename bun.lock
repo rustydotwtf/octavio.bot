@@ -20,34 +20,34 @@
       },
     },
     "apps/review-bot-cli": {
-      "name": "@octavio/review-bot-cli",
+      "name": "@octavio.bot/review-bot-cli",
       "dependencies": {
+        "@octavio.bot/agent-code-review": "workspace:*",
+        "@octavio.bot/config": "workspace:*",
+        "@octavio.bot/github-review": "workspace:*",
+        "@octavio.bot/opencode-runner": "workspace:*",
         "@octavio.bot/prompts": "workspace:*",
-        "@octavio/agent-code-review": "workspace:*",
-        "@octavio/config": "workspace:*",
-        "@octavio/github-review": "workspace:*",
-        "@octavio/opencode-runner": "workspace:*",
       },
     },
     "packages/agent-code-review": {
-      "name": "@octavio/agent-code-review",
+      "name": "@octavio.bot/agent-code-review",
       "dependencies": {
-        "@octavio/config": "workspace:*",
-        "@octavio/github-review": "workspace:*",
-        "@octavio/opencode-runner": "workspace:*",
+        "@octavio.bot/config": "workspace:*",
+        "@octavio.bot/github-review": "workspace:*",
+        "@octavio.bot/opencode-runner": "workspace:*",
       },
     },
     "packages/config": {
-      "name": "@octavio/config",
+      "name": "@octavio.bot/config",
       "dependencies": {
         "zod": "^4.1.12",
       },
     },
     "packages/github-review": {
-      "name": "@octavio/github-review",
+      "name": "@octavio.bot/github-review",
     },
     "packages/opencode-runner": {
-      "name": "@octavio/opencode-runner",
+      "name": "@octavio.bot/opencode-runner",
       "dependencies": {
         "@opencode-ai/sdk": "^1.2.10",
       },
@@ -62,17 +62,17 @@
 
     "@clack/prompts": ["@clack/prompts@1.0.1", "", { "dependencies": { "@clack/core": "1.0.1", "picocolors": "^1.0.0", "sisteransi": "^1.0.5" } }, "sha512-/42G73JkuYdyWZ6m8d/CJtBrGl1Hegyc7Fy78m5Ob+jF85TOUmLR5XLce/U3LxYAw0kJ8CT5aI99RIvPHcGp/Q=="],
 
+    "@octavio.bot/agent-code-review": ["@octavio.bot/agent-code-review@workspace:packages/agent-code-review"],
+
+    "@octavio.bot/config": ["@octavio.bot/config@workspace:packages/config"],
+
+    "@octavio.bot/github-review": ["@octavio.bot/github-review@workspace:packages/github-review"],
+
+    "@octavio.bot/opencode-runner": ["@octavio.bot/opencode-runner@workspace:packages/opencode-runner"],
+
     "@octavio.bot/prompts": ["@octavio.bot/prompts@workspace:packages/prompts"],
 
-    "@octavio/agent-code-review": ["@octavio/agent-code-review@workspace:packages/agent-code-review"],
-
-    "@octavio/config": ["@octavio/config@workspace:packages/config"],
-
-    "@octavio/github-review": ["@octavio/github-review@workspace:packages/github-review"],
-
-    "@octavio/opencode-runner": ["@octavio/opencode-runner@workspace:packages/opencode-runner"],
-
-    "@octavio/review-bot-cli": ["@octavio/review-bot-cli@workspace:apps/review-bot-cli"],
+    "@octavio.bot/review-bot-cli": ["@octavio.bot/review-bot-cli@workspace:apps/review-bot-cli"],
 
     "@opencode-ai/sdk": ["@opencode-ai/sdk@1.2.10", "", {}, "sha512-SyXcVqry2hitPVvQtvXOhqsWyFhSycG/+LTLYXrcq8AFmd9FR7dyBSDB3f5Ol6IPkYOegk8P2Eg2kKPNSNiKGw=="],
 
