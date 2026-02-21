@@ -86,6 +86,10 @@ const VALID_SEVERITIES = new Set<FindingSeverity>([
 
 const FRONTMATTER_REGEX = /^---\s*\n([\s\S]*?)\n---\s*(?:\n|$)/u;
 
+const writeWorkflowLog = (message: string): void => {
+  process.stdout.write(`[review-workflow] ${message}\n`);
+};
+
 const stripCodeFence = (jsonBlock: string): string =>
   jsonBlock
     .replace(/^```json\s*/u, "")
@@ -453,19 +457,31 @@ export class CodeReviewWorkflow {
   }
 
   public async run(input: ReviewRunInput): Promise<ReviewRunResult> {
+    writeWorkflowLog(
+      `loading PR metadata for ${input.repo.owner}/${input.repo.repo}#${input.repo.pullNumber}`
+    );
     const pullRequest = await this.config.githubClient.getPullRequest(
       input.repo
     );
+    writeWorkflowLog(`loaded PR title: ${pullRequest.title}`);
+
+    writeWorkflowLog("loading changed files");
     const files = await this.config.githubClient.listPullRequestFiles(
       input.repo
     );
+    writeWorkflowLog(`loaded ${files.length} changed files`);
 
+    writeWorkflowLog("sending PR context to OpenCode");
     const report = await this.config.opencodeRunner.generateReport({
       contextMarkdown: formatPullRequestContext(pullRequest, files),
       instructionsMarkdown: input.instructionsMarkdown,
     });
+    writeWorkflowLog(
+      `received report markdown (${report.reportMarkdown.length} chars)`
+    );
 
     const findings = parseFindingsFromRunner(report);
+    writeWorkflowLog(`parsed ${findings.length} findings`);
     const comparison = compareFindings(findings, input.previousFindings ?? []);
     const parsedPolicy = parsePolicyRulesFromInstructions(
       input.instructionsMarkdown,

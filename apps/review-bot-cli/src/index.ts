@@ -11,6 +11,7 @@ import { GitHubReviewClient } from "@octavio/github-review";
 import { OpenCodeReportRunner } from "@octavio/opencode-runner";
 
 const DEFAULT_INSTRUCTIONS_PATH = "prompts/code-review.md";
+const REPORT_LOG_MAX_CHARS = 8000;
 
 interface ResolvedInstructions {
   instructionsPath: string;
@@ -117,6 +118,11 @@ const defaultResultPath = (pullNumber: number): string => {
   return `result-pr-${pullNumber}-${timestamp}.json`;
 };
 
+const truncateForLogs = (value: string): string =>
+  value.length > REPORT_LOG_MAX_CHARS
+    ? `${value.slice(0, REPORT_LOG_MAX_CHARS)}\n...truncated...`
+    : value;
+
 const isReviewFinding = (value: unknown): value is ReviewFinding => {
   if (!value || typeof value !== "object") {
     return false;
@@ -185,6 +191,10 @@ const run = async (): Promise<void> => {
     opencodeRunner,
   });
 
+  process.stdout.write(
+    `Running review for ${cliInput.owner}/${cliInput.repo}#${cliInput.pullNumber}...\n`
+  );
+
   const result = await workflow.run({
     instructionsMarkdown,
     policyFailOnRules: resolvedInstructions.policyFailOnRules,
@@ -195,6 +205,12 @@ const run = async (): Promise<void> => {
       repo: cliInput.repo,
     },
   });
+
+  process.stdout.write("Review run completed. Writing artifacts...\n");
+  process.stdout.write("Generated report markdown:\n");
+  process.stdout.write("----- BEGIN REPORT -----\n");
+  process.stdout.write(`${truncateForLogs(result.reportMarkdown)}\n`);
+  process.stdout.write("----- END REPORT -----\n");
 
   const reportPath =
     cliInput.reportOutputPath ?? defaultReportPath(cliInput.pullNumber);

@@ -4,6 +4,9 @@ interface Part {
 }
 
 interface OpenCodeClient {
+  event: {
+    subscribe(): Promise<{ stream: AsyncIterable<unknown> }>;
+  };
   session: {
     create(input: {
       query: { directory: string };
@@ -249,20 +252,72 @@ const extractStructuredReport = (response: {
   };
 };
 
-const safeJsonPreview = (value: unknown): string => {
+const preview = (value: unknown): string => {
   try {
-    const encoded = JSON.stringify(value);
-    if (!encoded) {
-      return "<empty>";
-    }
-
-    const maxChars = 1200;
-    return encoded.length > maxChars
-      ? `${encoded.slice(0, maxChars)}...`
-      : encoded;
+    const text = JSON.stringify(value) ?? "<empty>";
+    return text.length > 1200 ? `${text.slice(0, 1200)}...` : text;
   } catch {
     return "<unserializable>";
   }
+};
+
+const writeRunnerLog = (message: string): void => {
+  process.stdout.write(`[opencode-runner] ${message}\n`);
+};
+
+const HEARTBEAT_EVENT_TYPE = "server.heartbeat";
+
+const startEventLogging = async (
+  client: OpenCodeClient
+): Promise<{ done: Promise<void>; stop: () => void }> => {
+  const { stream } = await client.event.subscribe();
+  let stopped = false;
+
+  const done = (async () => {
+    for await (const event of stream) {
+      if (stopped) {
+        break;
+      }
+
+      if (!event || typeof event !== "object") {
+        continue;
+      }
+
+      const { properties, type } = event as {
+        properties?: Record<string, unknown>;
+        type?: unknown;
+      };
+      if (typeof type !== "string") {
+        continue;
+      }
+
+      if (type === HEARTBEAT_EVENT_TYPE) {
+        continue;
+      }
+
+      const { phase, status, tool } = properties ?? {};
+      const labels = [
+        typeof status === "string" ? `status=${status}` : null,
+        typeof phase === "string" ? `phase=${phase}` : null,
+        typeof tool === "string" ? `tool=${tool}` : null,
+      ].filter(Boolean) as string[];
+      if (properties && Object.keys(properties).length > 0) {
+        labels.push(`properties=${preview(properties)}`);
+      }
+      if (labels.length > 0) {
+        writeRunnerLog(`event=${type} ${labels.join(" ")}`);
+      } else {
+        writeRunnerLog(`event=${type}`);
+      }
+    }
+  })();
+
+  return {
+    done,
+    stop: () => {
+      stopped = true;
+    },
+  };
 };
 
 const buildLockedConfig = (model: string | undefined): Config => {
@@ -316,14 +371,31 @@ export class OpenCodeReportRunner {
   public async generateReport(
     input: GenerateReportInput
   ): Promise<GenerateReportResult> {
+    writeRunnerLog(
+      `initializing sdk client host=${this.options.hostname} port=${this.options.port} model=${this.options.model ?? "<default>"}`
+    );
     const sdk = (await import("@opencode-ai/sdk")) as OpenCodeModule;
+    writeRunnerLog("creating OpenCode instance");
     const opencode = await sdk.createOpencode({
       config: buildLockedConfig(this.options.model),
       hostname: this.options.hostname,
       port: this.options.port,
     });
 
+    let eventLogger: { done: Promise<void>; stop: () => void } | null = null;
     try {
+      writeRunnerLog("subscribing to OpenCode event stream");
+      eventLogger = await startEventLogging(opencode.client);
+    } catch (error: unknown) {
+      writeRunnerLog(
+        `event stream unavailable; continuing without live events (${error instanceof Error ? error.message : String(error)})`
+      );
+    }
+
+    try {
+      writeRunnerLog(
+        `creating session for directory=${this.options.workspaceDirectory}`
+      );
       const session = await opencode.client.session.create({
         query: { directory: this.options.workspaceDirectory },
       });
@@ -332,74 +404,96 @@ export class OpenCodeReportRunner {
         throw new Error("OpenCode did not return a session ID.");
       }
 
-      const response = await opencode.client.session.prompt({
-        body: {
-          format: {
-            retryCount: 2,
-            schema: {
-              additionalProperties: false,
-              properties: {
-                findings: {
-                  items: {
-                    additionalProperties: false,
-                    properties: {
-                      comment: { type: "string" },
-                      id: { type: "string" },
-                      line: { minimum: 1, type: "integer" },
-                      path: { type: "string" },
-                      severity: {
-                        enum: ["low", "medium", "high", "critical"],
-                        type: "string",
+      writeRunnerLog(`session created id=${sessionId}; sending prompt`);
+
+      const startTimeMs = Date.now();
+      const progressInterval = setInterval(() => {
+        const elapsedSeconds = Math.floor((Date.now() - startTimeMs) / 1000);
+        writeRunnerLog(`prompt still running (${elapsedSeconds}s elapsed)`);
+      }, 10_000);
+
+      const response = await opencode.client.session
+        .prompt({
+          body: {
+            format: {
+              retryCount: 2,
+              schema: {
+                additionalProperties: false,
+                properties: {
+                  findings: {
+                    items: {
+                      additionalProperties: false,
+                      properties: {
+                        comment: { type: "string" },
+                        id: { type: "string" },
+                        line: { minimum: 1, type: "integer" },
+                        path: { type: "string" },
+                        severity: {
+                          enum: ["low", "medium", "high", "critical"],
+                          type: "string",
+                        },
+                        title: { type: "string" },
                       },
-                      title: { type: "string" },
+                      required: [
+                        "id",
+                        "severity",
+                        "title",
+                        "path",
+                        "line",
+                        "comment",
+                      ],
+                      type: "object",
                     },
-                    required: [
-                      "id",
-                      "severity",
-                      "title",
-                      "path",
-                      "line",
-                      "comment",
-                    ],
-                    type: "object",
+                    type: "array",
                   },
-                  type: "array",
+                  report_markdown: { type: "string" },
                 },
-                report_markdown: { type: "string" },
+                required: ["report_markdown", "findings"],
+                type: "object",
               },
-              required: ["report_markdown", "findings"],
-              type: "object",
+              type: "json_schema",
             },
-            type: "json_schema",
+            parts: [
+              {
+                text: OpenCodeReportRunner.buildPrompt(
+                  input.instructionsMarkdown,
+                  input.contextMarkdown
+                ),
+                type: "text",
+              },
+            ],
           },
-          parts: [
-            {
-              text: OpenCodeReportRunner.buildPrompt(
-                input.instructionsMarkdown,
-                input.contextMarkdown
-              ),
-              type: "text",
-            },
-          ],
-        },
-        path: { id: sessionId },
-        query: { directory: this.options.workspaceDirectory },
-        throwOnError: true,
-      });
+          path: { id: sessionId },
+          query: { directory: this.options.workspaceDirectory },
+          throwOnError: true,
+        })
+        .finally(() => {
+          clearInterval(progressInterval);
+        });
 
       if (!response.data) {
         throw new Error("OpenCode did not return a response payload.");
       }
 
+      writeRunnerLog("received response payload from sdk");
+
       const structuredReport = extractStructuredReport(response);
       if (structuredReport) {
+        writeRunnerLog(
+          `structured output parsed findings=${structuredReport.structuredFindings.length}`
+        );
         return structuredReport;
       }
+
+      writeRunnerLog(
+        "structured output unavailable; falling back to assistant message parsing"
+      );
 
       const responseParts = extractResponseParts(response);
       if (responseParts.length === 0) {
         const responseText = extractResponseText(response);
         if (responseText) {
+          writeRunnerLog("using text fallback response parsing");
           return {
             reportMarkdown: responseText,
             structuredFindings: [],
@@ -408,7 +502,7 @@ export class OpenCodeReportRunner {
         }
 
         throw new Error(
-          `OpenCode response did not include assistant message parts. Response preview: ${safeJsonPreview(response.data)}`
+          `OpenCode response did not include assistant message parts. Response preview: ${preview(response.data)}`
         );
       }
 
@@ -418,7 +512,12 @@ export class OpenCodeReportRunner {
         usedStructuredOutput: false,
       };
     } finally {
+      writeRunnerLog("closing OpenCode instance");
+      eventLogger?.stop();
       opencode.server.close();
+      if (eventLogger) {
+        await Promise.race([eventLogger.done, Bun.sleep(1000)]);
+      }
     }
   }
 
