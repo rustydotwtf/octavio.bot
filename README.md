@@ -5,10 +5,10 @@ CI-first PR review gate that returns a GitHub check result (pass/fail) and uploa
 ## What It Does
 
 1. Builds PR context from changed files.
-2. Generates a markdown review report with OpenCode.
-3. Extracts structured findings from the report JSON block.
+2. Instructs OpenCode to write artifacts directly to disk using an Artifact Schema.
+3. Validates artifacts with `bun run validate-artifacts`.
 4. Compares current findings to the previous run artifact (`new`, `persisting`, `resolved`).
-5. Applies fail policy from instruction frontmatter.
+5. Applies fail policy from profile config or instruction frontmatter.
 
 No GitHub review comments are created or updated.
 
@@ -43,14 +43,63 @@ bun run review-bot --owner acme --repo web --pr 123 --instructions prompts/code-
 
 Optional flags:
 
-- `--report-output path/to/report.md`
-- `--findings-output path/to/findings.json`
+- `--report-output path/to/review.md`
+- `--findings-output path/to/confidence.json`
 - `--result-output path/to/result.json`
-- `--previous-findings path/to/previous-findings.json`
+- `--previous-findings path/to/previous-confidence.json`
+- `--instructions-profile balanced`
+- `--artifact-execution agent|host`
+
+Instruction resolution order:
+
+1. `--instructions` (explicit path)
+2. `--instructions-profile` from `.octavio/review.config.json`
+3. `defaultProfile` from `.octavio/review.config.json`
+4. `prompts/code-review.md`
+
+Policy resolution order:
+
+1. profile policy from `.octavio/review.config.json` (`policy.failOn`)
+2. instruction frontmatter policy (`policy.fail_on`)
+3. fail-open fallback
+
+### Optional review config
+
+Create `.octavio/review.config.json` to manage instruction profiles and policy overrides:
+
+```json
+{
+  "defaultProfile": "balanced",
+  "profiles": {
+    "balanced": {
+      "artifactExecution": "agent",
+      "artifactSchema": {
+        "artifactDir": "artifacts",
+        "reviewFile": "review.md",
+        "confidenceFile": "confidence.json",
+        "validatorCommand": "bun run validate-artifacts --dir artifacts",
+        "maxAttempts": 2
+      },
+      "instructionsPath": "prompts/code-review.md",
+      "policy": {
+        "failOn": ["new:high", "new:critical"]
+      }
+    },
+    "security": {
+      "instructionsPath": "prompts/security-review.md",
+      "policy": {
+        "failOn": ["new:medium", "new:high", "new:critical"]
+      }
+    }
+  }
+}
+```
 
 ## Policy Configuration
 
-Policy is read from YAML frontmatter in the instructions markdown:
+Policy can be set either in profile config (`policy.failOn`) or in YAML frontmatter in instructions (`policy.fail_on`).
+
+Frontmatter example:
 
 ```yaml
 ---
@@ -63,15 +112,34 @@ policy:
 
 Supported scope: `any`, `new`, `persisting`, `resolved`.
 
+When both are present, profile config wins.
+
 If policy is missing or invalid, the runner uses fail-open fallback and reports warnings in `result.json`.
+
+## Artifact Schema
+
+Default artifact schema writes these files into `artifacts/`:
+
+- `review.md` - human-readable review report
+- `confidence.json` - machine-readable summary and findings
+
+Validation is enforced by `bun run validate-artifacts --dir artifacts`.
+
+`confidence.json` schema requires:
+
+- `summary` (string)
+- `overallConfidence` (`low|medium|high`)
+- `findings` (array; each finding requires `id`, `severity`, `title`, `path`, `line`, `comment`)
+- `meta` (object)
 
 ## GitHub Action
 
 Workflow file: `.github/workflows/review-check.yml`
 
 - Posts a concise summary in the job summary panel.
-- Uploads `report.md`, `findings.json`, and `result.json` as artifacts.
-- Reuses previous findings artifact by PR number for comparison.
+- Uploads `review.md`, `confidence.json`, and `result.json` as artifacts.
+- Reuses previous confidence artifact by PR number for comparison.
+- Supports profile selection via repo variable `OCTAVIO_INSTRUCTIONS_PROFILE`.
 
 ## Layout
 

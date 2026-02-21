@@ -10,6 +10,7 @@
     "build": "bun x tsc --noEmit",
     "ci": "bun run check && bun run build && bun run test",
     "review-bot": "bun run apps/review-bot-cli/src/index.ts",
+    "validate-artifacts": "bun run scripts/validate-artifacts.ts",
     "check": "ultracite check",
     "fix": "ultracite fix",
     "prepare": "lefthook install",

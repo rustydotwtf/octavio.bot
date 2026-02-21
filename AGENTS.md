@@ -143,14 +143,15 @@ This repository now uses a Bun workspace monorepo:
 
 - `apps/review-bot-cli` - executable CLI for the review workflow
 - `packages/config` - runtime env and CLI config parsing
-- `packages/opencode-runner` - OpenCode SDK wrapper for phase 1 report generation
+- `packages/opencode-runner` - OpenCode SDK wrapper for artifact-schema generation and validation retries
 - `packages/github-review` - GitHub REST helpers for PR metadata and changed files
 - `packages/agent-runtime` - AI SDK gateway model factory (currently not used by CI check path)
 - `packages/agent-code-review` - report parsing, prior-run comparison, and instruction-driven policy evaluation
 
 ### Common Commands
 
-- Run bot: `bun run review-bot --owner <owner> --repo <repo> --pr <number> --instructions prompts/code-review.md --workdir .`
+- Run bot: `bun run review-bot --owner <owner> --repo <repo> --pr <number> [--instructions prompts/code-review.md] [--instructions-profile <name>] [--artifact-execution agent|host] --workdir .`
+- Validate artifacts: `bun run validate-artifacts --dir artifacts`
 - Run GitHub check workflow: `.github/workflows/review-check.yml` on pull requests
 - Lint and format check: `bun x ultracite check`
 - Auto-fix style/lint: `bun x ultracite fix`
@@ -158,6 +159,15 @@ This repository now uses a Bun workspace monorepo:
 ### Runtime Expectations
 
 - `.env` should include `GITHUB_TOKEN`, OpenCode connection settings (`OPENCODE_HOSTNAME`, `OPENCODE_PORT`), and `OPENCODE_API_KEY` for OpenCode Zen; `OPENCODE_MODEL` is optional
-- The OpenCode phase is configured with `edit: deny` and `external_directory: deny`
+- Default artifact execution is `agent` (OpenCode can write artifacts in-workspace); `external_directory` remains denied
 - Keep OpenCode prompts constrained to the provided workspace directory
-- Fail policy is configured in the instructions markdown frontmatter (`policy.fail_on`)
+- Fail policy can come from profile config (`policy.failOn`) or instruction frontmatter (`policy.fail_on`)
+
+### Instruction Profiles
+
+- Optional repo config file: `.octavio/review.config.json`
+- CLI supports `--instructions-profile <name>` to select a profile
+- Profiles can define `artifactExecution` and `artifactSchema` (`artifactDir`, `reviewFile`, `confidenceFile`, `validatorCommand`, `maxAttempts`)
+- Instruction resolution order: explicit `--instructions`, then profile, then `defaultProfile`, then `prompts/code-review.md`
+- Policy resolution order: profile `policy.failOn`, then instructions frontmatter `policy.fail_on`, then fail-open fallback
+- GitHub workflow can set `OCTAVIO_INSTRUCTIONS_PROFILE` repo variable to choose profile in CI
