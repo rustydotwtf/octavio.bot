@@ -6,6 +6,7 @@ out
 dist
 *.tgz
 apps/review-bot-cli/prompts
+apps/site/public
 
 # code coverage
 coverage

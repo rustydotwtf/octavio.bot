@@ -177,6 +177,7 @@ Most formatting and common issues are automatically fixed by Oxlint + Oxfmt. Run
 This repository now uses a Bun workspace monorepo:
 
 - `apps/review-bot-cli` - publishable CLI package (`@octavio.bot/review`, binary `octavio-review`)
+- `apps/site` - static product site for `octavio.bot` (idcmd-based)
 - `packages/config` - runtime env and CLI config parsing
 - `packages/opencode-runner` - OpenCode SDK wrapper for artifact-schema generation and validation retries
 - `packages/github-review` - GitHub REST helpers for PR metadata and changed files
@@ -192,6 +193,9 @@ Notes:
 ### Common Commands
 
 - Run local source bot: `bun run review-bot --owner <owner> --repo <repo> --pr <number> [--instructions /absolute/or/workspace/path.md] [--instructions-profile <name>] [--artifact-execution agent|host] [--install-opencode] --workdir .`
+- Run site locally: `bun run --cwd apps/site dev`
+- Build site: `bun run --cwd apps/site build`
+- Deploy site to Vercel: `bun run --cwd apps/site deploy`
 - Initialize Octavio files in a target repo: `bunx --bun @octavio.bot/review@latest init --workdir . [--force]`
 - Run published CLI: `bunx --bun @octavio.bot/review@latest review --owner <owner> --repo <repo> --pr <number> --workdir .`
 - Doctor command: `bunx --bun @octavio.bot/review@latest doctor`
@@ -233,3 +237,4 @@ Task orchestration notes:
 
 - @README.md
 - @apps/review-bot-cli/README.md
+- @apps/site/README.md

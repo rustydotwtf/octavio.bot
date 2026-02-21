@@ -35,5 +35,6 @@
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false
-  }
+  },
+  "include": ["apps/review-bot-cli/src/**/*.ts", "packages/**/*.ts"]
 }

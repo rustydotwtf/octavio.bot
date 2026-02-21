@@ -10,6 +10,7 @@ This repository is a Bun workspace for building multiple Octavio agents and shar
 Current app:
 
 - `apps/review-bot-cli` - publishable PR review CLI package (`@octavio.bot/review`)
+- `apps/site` - static product site for `octavio.bot`
 
 Current shared packages:
 
@@ -29,6 +30,7 @@ Prompt authoring and packaging:
 App-specific setup, usage, and behavior live with each app.
 
 - Review CLI docs: `apps/review-bot-cli/README.md`
+- Site docs: `apps/site/README.md`
 
 ## Development Commands
 
@@ -47,6 +49,9 @@ Useful workflow commands:
 
 - Local review CLI source run: `bun run review-bot ...`
 - Build publishable review CLI: `bun run review-cli:build`
+- Run site locally: `bun run --cwd apps/site dev`
+- Build site: `bun run --cwd apps/site build`
+- Deploy site (Vercel): `bun run --cwd apps/site deploy`
 - Initialize Octavio files in any repo: `bunx --bun @octavio.bot/review@latest init --workdir .`
 
 ## CI

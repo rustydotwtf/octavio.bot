@@ -1,0 +1,35 @@
+# Site Agent Notes
+
+Scope: applies to files under `apps/site`.
+
+## Package Intent
+
+- This app is the static `octavio.bot` site.
+- Keep it focused on shipped products and product docs entry points.
+- Do not add speculative pages for unshipped products.
+
+## Source of Truth
+
+- Page content lives in `content/*.md`.
+- Shared shell/layout behavior lives in `src/ui/` and `styles/tailwind.css`.
+- Site-level config lives in `site.jsonc`.
+
+## Commands
+
+Run from repository root:
+
+- `bun run --cwd apps/site dev`
+- `bun run --cwd apps/site build`
+- `bun run --cwd apps/site preview`
+- `bun run --cwd apps/site check`
+
+## Deployment
+
+- Primary deployment target is Vercel.
+- Use `bun run --cwd apps/site deploy`.
+
+## Documentation Sync
+
+- If app behavior, structure, or commands change, update both:
+  - `apps/site/README.md`
+  - root `README.md` (workspace overview)

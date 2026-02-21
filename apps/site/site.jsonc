@@ -1,0 +1,31 @@
+{
+  "name": "octavio.bot",
+  "description": "Official Octavio product site",
+  "cache": {
+    // "fresh" | "balanced" | "static"
+    "preset": "static",
+
+    // Optional HTML edge cache overrides
+    // "html": {
+    //   "sMaxAgeSeconds": 60,
+    //   "staleWhileRevalidateSeconds": 3600,
+    // },
+  },
+  "baseUrl": "https://octavio.bot",
+  "groups": [{ "id": "main", "label": "Navigation", "order": 1 }],
+  "search": {
+    "scope": "full",
+  },
+  "rightRail": {
+    "enabled": true,
+    "visibleFrom": "xl",
+    "placement": "viewport",
+    "tocLevels": [2, 3],
+    "smoothScroll": false,
+    "scrollSpy": {
+      "enabled": true,
+      "centerActiveItem": true,
+      "updateHash": "never",
+    },
+  },
+}
