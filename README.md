@@ -151,7 +151,7 @@ Workflow file: `.github/workflows/review-check.yml`
 - Uploads `review.md`, `confidence.json`, and `result.json` as artifacts.
 - Reuses previous confidence artifact by PR number and profile for comparison.
 - Runs a profile matrix (`balanced`, `styling`, `security`) with `max-parallel: 1` so matrix jobs execute one at a time.
-- Defaults `OPENCODE_MODEL` to `opencode/glm-5-free` unless overridden by repository variable.
+- Defaults `OPENCODE_MODEL` to `opencode/minimax-m2.5-free` unless overridden by repository variable.
 
 ## Layout
 

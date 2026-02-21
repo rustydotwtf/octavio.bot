@@ -56,105 +56,18 @@ jobs:
             echo "OpenCode CLI was not found after install; continuing because SDK path is used by the review runner."
           fi
 
-      - name: Locate previous findings artifact
-        id: previous-artifact
-        timeout-minutes: 2
-        env:
-          OCTAVIO_PROFILE_NAME: ${{ matrix.profile }}
-        uses: actions/github-script@v7
-        with:
-          script: |
-            if (!context.payload.pull_request) {
-              core.setOutput("run_id", "")
-              core.setOutput("artifact_name", "")
-              return
-            }
-
-            const profileName = process.env.OCTAVIO_PROFILE_NAME
-            const preferredArtifactName = `octavio-confidence-pr-${context.payload.pull_request.number}-${profileName}`
-            const artifactNames = [preferredArtifactName]
-
-            if (profileName === "balanced") {
-              artifactNames.push(
-                `octavio-confidence-pr-${context.payload.pull_request.number}`,
-                `octavio-findings-pr-${context.payload.pull_request.number}`
-              )
-            }
-            const { owner, repo } = context.repo
-
-            const runs = await github.paginate(
-              github.rest.actions.listWorkflowRunsForRepo,
-              {
-                owner,
-                repo,
-                event: "pull_request",
-                per_page: 100,
-              }
-            )
-
-            for (const run of runs) {
-              if (run.id === context.runId || run.status !== "completed") {
-                continue
-              }
-
-              const artifacts = await github.paginate(
-                github.rest.actions.listWorkflowRunArtifacts,
-                {
-                  owner,
-                  repo,
-                  run_id: run.id,
-                  per_page: 100,
-                }
-              )
-
-              const match = artifactNames
-                .map((name) =>
-                  artifacts.find(
-                    (artifact) => artifact.name === name && !artifact.expired
-                  )
-                )
-                .find(Boolean)
-
-              if (!match) {
-                continue
-              }
-
-              core.setOutput("run_id", String(run.id))
-              core.setOutput("artifact_name", match.name)
-              return
-            }
-
-            core.setOutput("run_id", "")
-            core.setOutput("artifact_name", "")
-
-      - name: Download previous findings artifact
-        if: steps.previous-artifact.outputs.run_id != ''
-        uses: actions/download-artifact@v4
-        with:
-          github-token: ${{ github.token }}
-          name: ${{ steps.previous-artifact.outputs.artifact_name }}
-          path: .previous-findings
-          repository: ${{ github.repository }}
-          run-id: ${{ steps.previous-artifact.outputs.run_id }}
-
       - name: Run review check
         timeout-minutes: 8
         env:
           GITHUB_TOKEN: ${{ github.token }}
           OPENCODE_HOSTNAME: ${{ vars.OPENCODE_HOSTNAME || '127.0.0.1' }}
           OCTAVIO_INSTRUCTIONS_PROFILE: ${{ matrix.profile }}
-          OPENCODE_MODEL: ${{ vars.OPENCODE_MODEL || 'opencode/glm-5-free' }}
+          OPENCODE_MODEL: ${{ vars.OPENCODE_MODEL || 'opencode/minimax-m2.5-free' }}
           OPENCODE_PORT: ${{ vars.OPENCODE_PORT || '4096' }}
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
         run: |
           mkdir -p artifacts
-          PREVIOUS_ARGS=""
           PROFILE_ARGS=""
-          if [ -f ".previous-findings/confidence.json" ]; then
-            PREVIOUS_ARGS="--previous-findings .previous-findings/confidence.json"
-          elif [ -f ".previous-findings/findings.json" ]; then
-            PREVIOUS_ARGS="--previous-findings .previous-findings/findings.json"
-          fi
           if [ -n "$OCTAVIO_INSTRUCTIONS_PROFILE" ]; then
             PROFILE_ARGS="--instructions-profile $OCTAVIO_INSTRUCTIONS_PROFILE"
           fi
@@ -166,8 +79,7 @@ jobs:
             --workdir . \
             --report-output artifacts/review.md \
             --findings-output artifacts/confidence.json \
-            --result-output artifacts/result.json \
-            $PREVIOUS_ARGS
+            --result-output artifacts/result.json
 
       - name: Publish job summary
         if: always()
