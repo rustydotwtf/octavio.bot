@@ -30,6 +30,7 @@ const POLICY_RULE_REGEX =
   /^(any|new|persisting|resolved):(low|medium|high|critical)$/u;
 
 const artifactExecutionSchema = z.enum(["host", "agent"]);
+const instructionsPromptSchema = z.enum(["balanced", "styling", "security"]);
 
 export type ArtifactExecution = z.infer<typeof artifactExecutionSchema>;
 
@@ -46,7 +47,7 @@ const artifactSchemaConfigSchema = z
 const reviewProfileSchema = z.object({
   artifactExecution: artifactExecutionSchema.optional(),
   artifactSchema: artifactSchemaConfigSchema,
-  instructionsPath: z.string().min(1),
+  instructionsPrompt: instructionsPromptSchema,
   policy: z
     .object({
       failOn: z
