@@ -1,5 +1,4 @@
 import { CodeReviewWorkflow } from "@octavio/agent-code-review";
-import type { ReviewFinding } from "@octavio/agent-code-review";
 import type {
   ArtifactExecution,
   CliInput,
@@ -13,6 +12,8 @@ import {
 } from "@octavio/config";
 import { GitHubReviewClient } from "@octavio/github-review";
 import { OpenCodeReportRunner } from "@octavio/opencode-runner";
+
+import { readPreviousFindings } from "./previous-findings";
 
 const DEFAULT_INSTRUCTIONS_PATH = "prompts/code-review.md";
 const REPORT_LOG_MAX_CHARS = 8000;
@@ -168,100 +169,6 @@ const truncateForLogs = (value: string): string =>
   value.length > REPORT_LOG_MAX_CHARS
     ? `${value.slice(0, REPORT_LOG_MAX_CHARS)}\n...truncated...`
     : value;
-
-const computeFingerprint = (finding: {
-  line: number;
-  path: string;
-  severity: string;
-  title: string;
-}): string =>
-  [
-    finding.path.trim().toLowerCase(),
-    String(finding.line),
-    finding.severity.trim().toLowerCase(),
-    finding.title.trim().toLowerCase(),
-  ].join("|");
-
-const toReviewFinding = (value: unknown): ReviewFinding | null => {
-  if (!value || typeof value !== "object") {
-    return null;
-  }
-
-  const candidate = value as Partial<ReviewFinding>;
-  if (
-    typeof candidate.comment !== "string" ||
-    typeof candidate.id !== "string" ||
-    typeof candidate.line !== "number" ||
-    !Number.isInteger(candidate.line) ||
-    candidate.line <= 0 ||
-    typeof candidate.path !== "string" ||
-    typeof candidate.severity !== "string" ||
-    typeof candidate.title !== "string"
-  ) {
-    return null;
-  }
-
-  return {
-    comment: candidate.comment,
-    fingerprint:
-      candidate.fingerprint ??
-      computeFingerprint({
-        line: candidate.line,
-        path: candidate.path,
-        severity: candidate.severity,
-        title: candidate.title,
-      }),
-    id: candidate.id,
-    line: candidate.line,
-    path: candidate.path,
-    severity: candidate.severity,
-    title: candidate.title,
-  };
-};
-
-const extractFindingsFromConfidencePayload = (
-  payload: unknown
-): ReviewFinding[] => {
-  if (!payload || typeof payload !== "object") {
-    return [];
-  }
-
-  const maybeFindings = (payload as { findings?: unknown }).findings;
-  if (!Array.isArray(maybeFindings)) {
-    return [];
-  }
-
-  return maybeFindings
-    .map((item) => toReviewFinding(item))
-    .filter((item) => item !== null);
-};
-
-const readPreviousFindings = async (
-  previousFindingsPath: string | undefined
-): Promise<ReviewFinding[]> => {
-  if (!previousFindingsPath) {
-    return [];
-  }
-
-  const file = Bun.file(previousFindingsPath);
-  if (!(await file.exists())) {
-    return [];
-  }
-
-  const parsed = (await file.json()) as unknown;
-  const confidenceFindings = extractFindingsFromConfidencePayload(parsed);
-  if (confidenceFindings.length > 0) {
-    return confidenceFindings;
-  }
-
-  if (!Array.isArray(parsed)) {
-    return [];
-  }
-
-  return parsed
-    .map((item) => toReviewFinding(item))
-    .filter((item) => item !== null);
-};
 
 const run = async (): Promise<void> => {
   const cliInput = parseArgs(process.argv.slice(2));

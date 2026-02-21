@@ -62,7 +62,9 @@ jobs:
               return
             }
 
-            const artifactName = `octavio-confidence-pr-${context.payload.pull_request.number}`
+            const preferredArtifactName = `octavio-confidence-pr-${context.payload.pull_request.number}`
+            const legacyArtifactName = `octavio-findings-pr-${context.payload.pull_request.number}`
+            const artifactNames = [preferredArtifactName, legacyArtifactName]
             const { owner, repo } = context.repo
 
             const runs = await github.paginate(
@@ -90,16 +92,20 @@ jobs:
                 }
               )
 
-              const match = artifacts.find(
-                (artifact) => artifact.name === artifactName && !artifact.expired
-              )
+              const match = artifactNames
+                .map((name) =>
+                  artifacts.find(
+                    (artifact) => artifact.name === name && !artifact.expired
+                  )
+                )
+                .find(Boolean)
 
               if (!match) {
                 continue
               }
 
               core.setOutput("run_id", String(run.id))
-              core.setOutput("artifact_name", artifactName)
+              core.setOutput("artifact_name", match.name)
               return
             }
 
@@ -131,6 +137,8 @@ jobs:
           PROFILE_ARGS=""
           if [ -f ".previous-findings/confidence.json" ]; then
             PREVIOUS_ARGS="--previous-findings .previous-findings/confidence.json"
+          elif [ -f ".previous-findings/findings.json" ]; then
+            PREVIOUS_ARGS="--previous-findings .previous-findings/findings.json"
           fi
           if [ -n "$OCTAVIO_INSTRUCTIONS_PROFILE" ]; then
             PROFILE_ARGS="--instructions-profile $OCTAVIO_INSTRUCTIONS_PROFILE"
