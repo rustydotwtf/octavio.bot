@@ -1,0 +1,33 @@
+{
+  "defaultProfile": "balanced",
+  "profiles": {
+    "balanced": {
+      "artifactExecution": "agent",
+      "artifactSchema": {
+        "artifactDir": "artifacts",
+        "confidenceFile": "confidence.json",
+        "maxAttempts": 2,
+        "reviewFile": "review.md",
+        "validatorCommand": "bun run validate-artifacts --dir artifacts"
+      },
+      "instructionsPath": "prompts/code-review.md",
+      "policy": {
+        "failOn": ["new:high", "new:critical"]
+      }
+    },
+    "styling": {
+      "artifactExecution": "agent",
+      "artifactSchema": {
+        "artifactDir": "artifacts",
+        "confidenceFile": "confidence.json",
+        "maxAttempts": 2,
+        "reviewFile": "review.md",
+        "validatorCommand": "bun run validate-artifacts --dir artifacts"
+      },
+      "instructionsPath": "prompts/styling-review.md",
+      "policy": {
+        "failOn": ["new:high", "new:critical"]
+      }
+    }
+  }
+}

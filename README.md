@@ -95,6 +95,11 @@ Create `.octavio/review.config.json` to manage instruction profiles and policy o
 }
 ```
 
+This repository includes a committed `.octavio/review.config.json` with two profiles:
+
+- `balanced` (`prompts/code-review.md`)
+- `styling` (`prompts/styling-review.md`)
+
 ## Policy Configuration
 
 Policy can be set either in profile config (`policy.failOn`) or in YAML frontmatter in instructions (`policy.fail_on`).
@@ -143,8 +148,8 @@ Workflow file: `.github/workflows/review-check.yml`
 
 - Posts a concise summary in the job summary panel.
 - Uploads `review.md`, `confidence.json`, and `result.json` as artifacts.
-- Reuses previous confidence artifact by PR number for comparison.
-- Supports profile selection via repo variable `OCTAVIO_INSTRUCTIONS_PROFILE`.
+- Reuses previous confidence artifact by PR number and profile for comparison.
+- Runs a profile matrix (`balanced`, `styling`) with `max-parallel: 1` so matrix jobs execute one at a time.
 
 ## Layout
 
