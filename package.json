@@ -7,10 +7,13 @@
   ],
   "type": "module",
   "scripts": {
+    "build": "bun x tsc --noEmit",
+    "ci": "bun run check && bun run build && bun run test",
     "review-bot": "bun run apps/review-bot-cli/src/index.ts",
     "check": "ultracite check",
     "fix": "ultracite fix",
-    "prepare": "lefthook install"
+    "prepare": "lefthook install",
+    "test": "bun test"
   },
   "dependencies": {
     "@ai-sdk/gateway": "^3.0.52",

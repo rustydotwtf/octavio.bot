@@ -1,0 +1,38 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  lint-build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Lint
+        run: bun run check
+
+      - name: Build
+        run: bun run build
+
+      - name: Test
+        run: |
+          if git ls-files | grep -E '(\.test|\.spec|_test_|_spec_)\.(js|ts|jsx|tsx)$' > /dev/null; then
+            bun run test
+          else
+            echo "No test files found; skipping tests."
+          fi
