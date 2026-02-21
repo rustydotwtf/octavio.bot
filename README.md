@@ -19,6 +19,11 @@ Current shared packages:
 - `packages/agent-code-review` - review orchestration and policy evaluation
 - `packages/prompts` - publishable prompt package (`@octavio.bot/prompts`)
 
+Prompt authoring and packaging:
+
+- Author prompt markdown only in `packages/prompts/prompts/*.md`
+- `apps/review-bot-cli/prompts/` is generated during `build`/`prepack` for npm tarballs
+
 ## App Documentation
 
 App-specific setup, usage, and behavior live with each app.
@@ -33,6 +38,8 @@ bun run check
 bun run build
 bun run test
 ```
+
+Root `check`, `build`, and `test` commands are orchestrated via Turborepo (`turbo run ...`).
 
 Useful workflow commands:
 

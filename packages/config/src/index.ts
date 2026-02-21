@@ -1,3 +1,4 @@
+import { PROMPT_PROFILES } from "@octavio.bot/prompts";
 import { z } from "zod";
 
 const envSchema = z.object({
@@ -28,7 +29,7 @@ export interface CliInput extends RepoRef {
 const POLICY_RULE_REGEX = /^(any|new):(low|medium|high|critical)$/u;
 
 const artifactExecutionSchema = z.enum(["host", "agent"]);
-const instructionsPromptSchema = z.enum(["balanced", "styling", "security"]);
+const instructionsPromptSchema = z.enum(PROMPT_PROFILES);
 
 export type ArtifactExecution = z.infer<typeof artifactExecutionSchema>;
 

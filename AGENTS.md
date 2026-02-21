@@ -197,8 +197,13 @@ Notes:
 - Build publishable CLI dist: `bun run review-cli:build`
 - Run GitHub review workflow: `.github/workflows/review-check.yml` on pull requests
 - Run manual npm publish workflow: `.github/workflows/publish-review.yml` (`workflow_dispatch`, publishes from `apps/review-bot-cli`)
-- Lint and format check: `bun x ultracite check`
+- Lint and format check: `bun run check`
 - Auto-fix style/lint: `bun x ultracite fix`
+
+Task orchestration notes:
+
+- Root `check`, `build`, and `test` run through Turborepo (`turbo run ...`) and then apply root-level checks where needed.
+- Prompt markdown source-of-truth is `packages/prompts/prompts/*.md`; `apps/review-bot-cli/prompts/` is generated during CLI build/prepack for published tarballs.
 
 ### Runtime Expectations
 

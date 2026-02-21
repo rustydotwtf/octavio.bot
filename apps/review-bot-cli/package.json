@@ -24,7 +24,9 @@
     "access": "public"
   },
   "scripts": {
-    "build": "bun build ./src/index.ts --outfile ./dist/index.mjs --target bun --banner '#!/usr/bin/env bun' && chmod +x ./dist/index.mjs && rm -rf ./prompts && mkdir -p ./prompts && cp ../../packages/prompts/prompts/*.md ./prompts/",
+    "build:bin": "bun build ./src/index.ts --outfile ./dist/index.mjs --target bun --banner '#!/usr/bin/env bun' && chmod +x ./dist/index.mjs",
+    "sync:prompts": "[ -d ../../packages/prompts/prompts ] || (echo 'Missing prompts source: ../../packages/prompts/prompts' && exit 1) && rm -rf ./prompts && mkdir -p ./prompts && cp ../../packages/prompts/prompts/*.md ./prompts/",
+    "build": "bun run build:bin && bun run sync:prompts",
     "prepack": "bun run build"
   },
   "dependencies": {

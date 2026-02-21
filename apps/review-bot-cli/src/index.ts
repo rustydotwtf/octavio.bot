@@ -15,6 +15,7 @@ import { OpenCodeReportRunner } from "@octavio.bot/opencode-runner";
 import {
   DEFAULT_PROMPT_PROFILE,
   isPromptProfile,
+  PROMPT_PROFILES,
   resolvePromptPath,
 } from "@octavio.bot/prompts";
 
@@ -52,6 +53,7 @@ const DEFAULT_REVIEW_FILE = "review.md";
 const DEFAULT_CONFIDENCE_FILE = "confidence.json";
 const DEFAULT_ARTIFACT_MAX_ATTEMPTS = 2;
 const DEFAULT_ARTIFACT_EXECUTION: ArtifactExecution = "agent";
+const INSTRUCTIONS_PROFILE_LIST = PROMPT_PROFILES.join("|");
 
 const usage = (): string =>
   [
@@ -62,7 +64,7 @@ const usage = (): string =>
     "",
     "Options for review:",
     "  --instructions <path>",
-    "  --instructions-profile <balanced|styling|security>",
+    `  --instructions-profile <${INSTRUCTIONS_PROFILE_LIST}>`,
     "  --artifact-execution <agent|host>",
     "  --workdir <path>",
     "  --report-output <path>",
@@ -202,7 +204,7 @@ const resolveInstructions = (
     const profilePrompt = selectedProfile.instructionsPrompt;
     if (!isPromptProfile(profilePrompt)) {
       throw new Error(
-        `Unsupported instructionsPrompt '${profilePrompt}'. Supported values: balanced, styling, security.`
+        `Unsupported instructionsPrompt '${profilePrompt}'. Supported values: ${PROMPT_PROFILES.join(", ")}.`
       );
     }
 
