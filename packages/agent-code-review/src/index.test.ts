@@ -117,6 +117,31 @@ describe("policy parsing precedence", () => {
     );
   });
 
+  it("fails when frontmatter policy.fail_on contains invalid rules", async () => {
+    const workflow = createWorkflow("critical");
+
+    await expect(
+      workflow.run({
+        artifactExecution: "agent",
+        artifactSchema: {
+          artifactDir: "artifacts",
+          confidenceFile: "confidence.json",
+          maxAttempts: 1,
+          reviewFile: "review.md",
+          validatorCommand: "bun run validate-artifacts --dir artifacts",
+        },
+        instructionsMarkdown:
+          '---\npolicy:\n  fail_on:\n    - "invalid:rule"\n---\n# Test',
+        previousFindings: [],
+        repo: {
+          owner: "acme",
+          pullNumber: 1,
+          repo: "web",
+        },
+      })
+    ).rejects.toThrow(/Invalid instructions policy\.fail_on rules/u);
+  });
+
   it("uses frontmatter when config failOn is undefined", async () => {
     const workflow = createWorkflow("critical");
 
