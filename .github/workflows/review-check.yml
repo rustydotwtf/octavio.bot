@@ -24,9 +24,10 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Install OpenCode CLI
+      - name: Install OpenCode CLI (best effort)
+        continue-on-error: true
         run: |
-          curl -fsSL https://opencode.ai/install | bash
+          curl --retry 5 --retry-delay 2 --retry-all-errors -fsSL https://opencode.ai/install | bash
           if [ -d "$HOME/.opencode/bin" ]; then
             echo "$HOME/.opencode/bin" >> "$GITHUB_PATH"
           fi
@@ -41,8 +42,7 @@ jobs:
           elif [ -x "$HOME/.opencode/bin/opencode" ]; then
             "$HOME/.opencode/bin/opencode" --version
           else
-            echo "OpenCode CLI was not found after install."
-            exit 1
+            echo "OpenCode CLI was not found after install; continuing because SDK path is used by the review runner."
           fi
 
       - name: Locate previous findings artifact
