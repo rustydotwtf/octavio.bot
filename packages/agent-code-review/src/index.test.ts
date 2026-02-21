@@ -80,7 +80,6 @@ describe("policy parsing precedence", () => {
         },
         instructionsMarkdown: `---\npolicy:\n  fail_on:\n    - "any:critical"\n---\n`,
         policyFailOnRules: [],
-        previousFindings: [],
         repo: {
           owner: "acme",
           pullNumber: 1,
@@ -106,7 +105,6 @@ describe("policy parsing precedence", () => {
           validatorCommand: "bun run validate-artifacts --dir artifacts",
         },
         instructionsMarkdown: "# No policy",
-        previousFindings: [],
         repo: {
           owner: "acme",
           pullNumber: 1,
@@ -133,7 +131,6 @@ describe("policy parsing precedence", () => {
         },
         instructionsMarkdown:
           '---\npolicy:\n  fail_on:\n    - "invalid:rule"\n---\n# Test',
-        previousFindings: [],
         repo: {
           owner: "acme",
           pullNumber: 1,
@@ -156,7 +153,6 @@ describe("policy parsing precedence", () => {
         validatorCommand: "bun run validate-artifacts --dir artifacts",
       },
       instructionsMarkdown: `---\npolicy:\n  fail_on:\n    - "any:critical"\n---\n`,
-      previousFindings: [],
       repo: {
         owner: "acme",
         pullNumber: 1,
@@ -185,7 +181,6 @@ describe("policy parsing precedence", () => {
           validatorCommand: "bun run validate-artifacts --dir artifacts",
         },
         instructionsMarkdown: `---\npolicy:\n  fail_on:\n    - "any:critical"\n---\n`,
-        previousFindings: [],
         repo: {
           owner: "acme",
           pullNumber: 1,
@@ -216,7 +211,6 @@ describe("policy parsing precedence", () => {
       },
       instructionsMarkdown:
         '---\npolicy:\n  fail_on:\n    - "any:critical"\n---\n# Test',
-      previousFindings: [],
       repo: {
         owner: "acme",
         pullNumber: 1,
@@ -253,7 +247,6 @@ describe("policy parsing precedence", () => {
       },
       instructionsMarkdown:
         '---\npolicy:\n  fail_on:\n    - "any:critical"\n---\n# Test',
-      previousFindings: [],
       repo: {
         owner: "acme",
         pullNumber: 1,
@@ -287,7 +280,6 @@ describe("policy parsing precedence", () => {
       },
       instructionsMarkdown:
         '---\npolicy:\n  fail_on:\n    - "any:critical"\n---\n# Test',
-      previousFindings: [],
       repo: {
         owner: "acme",
         pullNumber: 1,

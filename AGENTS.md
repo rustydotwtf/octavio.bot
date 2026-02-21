@@ -151,7 +151,7 @@ This repository now uses a Bun workspace monorepo:
 - `packages/config` - runtime env and CLI config parsing
 - `packages/opencode-runner` - OpenCode SDK wrapper for artifact-schema generation and validation retries
 - `packages/github-review` - GitHub REST helpers for PR metadata and changed files
-- `packages/agent-code-review` - report parsing, prior-run comparison, and instruction-driven policy evaluation
+- `packages/agent-code-review` - report parsing and instruction-driven policy evaluation
 - `packages/prompts` - publishable prompt package (`@octavio.bot/prompts`) and helper utilities
 
 ### Common Commands

@@ -11,7 +11,7 @@ import type {
 } from "@octavio.bot/opencode-runner";
 
 type FindingSeverity = "low" | "medium" | "high" | "critical";
-type PolicyScope = "any" | "new" | "persisting" | "resolved";
+type PolicyScope = "any" | "new";
 
 export interface ReviewFinding {
   fingerprint: string;
@@ -33,14 +33,7 @@ export interface ReviewRunInput {
   artifactSchema: ArtifactSchemaConfig;
   instructionsMarkdown: string;
   policyFailOnRules?: string[];
-  previousFindings?: ReviewFinding[];
   repo: RepoRef;
-}
-
-export interface FindingsComparison {
-  newFindings: ReviewFinding[];
-  persistingFindings: ReviewFinding[];
-  resolvedFindings: ReviewFinding[];
 }
 
 export interface PolicyEvaluation {
@@ -51,7 +44,6 @@ export interface PolicyEvaluation {
 }
 
 export interface ReviewRunResult {
-  comparison: FindingsComparison;
   confidenceJson: string;
   hasBlockingFindings: boolean;
   findings: ReviewFinding[];
@@ -146,34 +138,6 @@ const parseFindingsFromRunner = (
   return findings;
 };
 
-const compareFindings = (
-  currentFindings: ReviewFinding[],
-  previousFindings: ReviewFinding[]
-): FindingsComparison => {
-  const previousByFingerprint = new Map(
-    previousFindings.map((finding) => [finding.fingerprint, finding])
-  );
-  const currentByFingerprint = new Map(
-    currentFindings.map((finding) => [finding.fingerprint, finding])
-  );
-
-  const newFindings = currentFindings.filter(
-    (finding) => !previousByFingerprint.has(finding.fingerprint)
-  );
-  const persistingFindings = currentFindings.filter((finding) =>
-    previousByFingerprint.has(finding.fingerprint)
-  );
-  const resolvedFindings = previousFindings.filter(
-    (finding) => !currentByFingerprint.has(finding.fingerprint)
-  );
-
-  return {
-    newFindings,
-    persistingFindings,
-    resolvedFindings,
-  };
-};
-
 const extractFrontmatter = (instructionsMarkdown: string): string | null => {
   const match = instructionsMarkdown.match(FRONTMATTER_REGEX);
   if (!match) {
@@ -197,11 +161,7 @@ const parseRawPolicyRules = (
     }
 
     const [scope, severity] = rawRule.split(":");
-    const isValidScope =
-      scope === "any" ||
-      scope === "new" ||
-      scope === "persisting" ||
-      scope === "resolved";
+    const isValidScope = scope === "any" || scope === "new";
     const isValidSeverity = VALID_SEVERITIES.has(
       (severity ?? "") as FindingSeverity
     );
@@ -220,7 +180,7 @@ const parseRawPolicyRules = (
 
   if (invalidRules.length > 0) {
     throw new Error(
-      `Invalid ${source === "config" ? "config policy.failOn" : "instructions policy.fail_on"} rules: ${invalidRules.join(", ")}. Supported format: <any|new|persisting|resolved>:<low|medium|high|critical>.`
+      `Invalid ${source === "config" ? "config policy.failOn" : "instructions policy.fail_on"} rules: ${invalidRules.join(", ")}. Supported format: <any|new>:<low|medium|high|critical>.`
     );
   }
 
@@ -271,34 +231,24 @@ const parsePolicyRulesFromInstructions = (
 };
 
 const findingsForScope = (
-  comparison: FindingsComparison,
   findings: ReviewFinding[],
   scope: PolicyScope
 ): ReviewFinding[] => {
-  if (scope === "new") {
-    return comparison.newFindings;
+  if (scope === "new" || scope === "any") {
+    return findings;
   }
 
-  if (scope === "persisting") {
-    return comparison.persistingFindings;
-  }
-
-  if (scope === "resolved") {
-    return comparison.resolvedFindings;
-  }
-
-  return findings;
+  throw new Error(`Unsupported policy scope '${scope}'.`);
 };
 
 const evaluatePolicy = (
   rules: PolicyRule[],
   source: "config" | "frontmatter",
-  findings: ReviewFinding[],
-  comparison: FindingsComparison
+  findings: ReviewFinding[]
 ): PolicyEvaluation => {
   const matchedRules: string[] = [];
   for (const rule of rules) {
-    const scopedFindings = findingsForScope(comparison, findings, rule.scope);
+    const scopedFindings = findingsForScope(findings, rule.scope);
     const hasMatch = scopedFindings.some(
       (finding) => finding.severity === rule.severity
     );
@@ -389,7 +339,6 @@ export class CodeReviewWorkflow {
 
     const findings = parseFindingsFromRunner(report);
     writeWorkflowLog(`parsed ${findings.length} findings`);
-    const comparison = compareFindings(findings, input.previousFindings ?? []);
     const parsedPolicy = parsePolicyRulesFromInstructions(
       input.instructionsMarkdown,
       input.policyFailOnRules
@@ -397,12 +346,10 @@ export class CodeReviewWorkflow {
     const policy = evaluatePolicy(
       parsedPolicy.rules,
       parsedPolicy.source,
-      findings,
-      comparison
+      findings
     );
 
     return {
-      comparison,
       confidenceJson: report.confidenceJson,
       findings,
       hasBlockingFindings: policy.shouldFail,

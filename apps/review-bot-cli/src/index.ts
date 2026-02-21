@@ -18,8 +18,6 @@ import {
   resolvePromptPath,
 } from "@octavio.bot/prompts";
 
-import { readPreviousFindings } from "./previous-findings";
-
 const REPORT_LOG_MAX_CHARS = 8000;
 
 interface ResolvedInstructions {
@@ -89,7 +87,7 @@ const parseArgs = (argv: string[]): CliInput => {
 
     if (!key?.startsWith("--") || !value) {
       throw new Error(
-        "Invalid arguments. Expected --owner --repo --pr [--instructions] [--instructions-profile] [--artifact-execution] [--workdir] [--report-output] [--findings-output] [--result-output] [--previous-findings]."
+        "Invalid arguments. Expected --owner --repo --pr [--instructions] [--instructions-profile] [--artifact-execution] [--workdir] [--report-output] [--findings-output] [--result-output]."
       );
     }
 
@@ -116,7 +114,6 @@ const parseArgs = (argv: string[]): CliInput => {
     instructionsPath,
     instructionsProfile: flags.get("instructions-profile"),
     owner,
-    previousFindingsPath: flags.get("previous-findings"),
     pullNumber,
     repo,
     reportOutputPath: flags.get("report-output"),
@@ -190,9 +187,6 @@ const run = async (): Promise<void> => {
   const instructionsMarkdown = await Bun.file(
     resolvedInstructions.instructionsPath
   ).text();
-  const previousFindings = await readPreviousFindings(
-    cliInput.previousFindingsPath
-  );
 
   const githubClient = new GitHubReviewClient({
     token: env.GITHUB_TOKEN,
@@ -219,7 +213,6 @@ const run = async (): Promise<void> => {
     artifactSchema: resolvedInstructions.artifactSchema,
     instructionsMarkdown,
     policyFailOnRules: resolvedInstructions.policyFailOnRules,
-    previousFindings,
     repo: {
       owner: cliInput.owner,
       pullNumber: cliInput.pullNumber,
@@ -249,11 +242,6 @@ const run = async (): Promise<void> => {
     resultPath,
     `${JSON.stringify(
       {
-        comparison: {
-          new: result.comparison.newFindings.length,
-          persisting: result.comparison.persistingFindings.length,
-          resolved: result.comparison.resolvedFindings.length,
-        },
         hasBlockingFindings: result.hasBlockingFindings,
         policy: result.policy,
         summary: result.summary,
@@ -278,9 +266,6 @@ const run = async (): Promise<void> => {
   process.stdout.write(`${result.summary}\n`);
   process.stdout.write(
     `Policy source: ${result.policy.source}; rules=${result.policy.failOnRules.join(", ") || "none"}; matched=${result.policy.matchedRules.join(", ") || "none"}\n`
-  );
-  process.stdout.write(
-    `Comparison: new=${result.comparison.newFindings.length} persisting=${result.comparison.persistingFindings.length} resolved=${result.comparison.resolvedFindings.length}\n`
   );
 
   if (result.hasBlockingFindings) {

@@ -7,8 +7,7 @@ CI-first PR review gate that returns a GitHub check result (pass/fail) and uploa
 1. Builds PR context from changed files.
 2. Instructs OpenCode to write artifacts directly to disk using an Artifact Schema.
 3. Validates artifacts with `bun run validate-artifacts`.
-4. Compares current findings to the previous run artifact (`new`, `persisting`, `resolved`).
-5. Applies fail policy from profile config or instruction frontmatter.
+4. Applies fail policy from profile config or instruction frontmatter.
 
 No GitHub review comments are created or updated.
 
@@ -46,7 +45,6 @@ Optional flags:
 - `--report-output path/to/review.md`
 - `--findings-output path/to/confidence.json`
 - `--result-output path/to/result.json`
-- `--previous-findings path/to/previous-confidence.json`
 - `--instructions-profile balanced`
 - `--artifact-execution agent|host`
 
@@ -120,7 +118,7 @@ policy:
 ---
 ```
 
-Supported scope: `any`, `new`, `persisting`, `resolved`.
+Supported scope: `any`, `new`.
 
 When both are present, profile config wins.
 
@@ -148,7 +146,6 @@ Workflow file: `.github/workflows/review-check.yml`
 
 - Posts a concise summary in the job summary panel.
 - Uploads `review.md`, `confidence.json`, and `result.json` as artifacts.
-- Reuses previous confidence artifact by PR number and profile for comparison.
 - Runs a profile matrix (`balanced`, `styling`, `security`) with `max-parallel: 1` so matrix jobs execute one at a time.
 - Defaults `OPENCODE_MODEL` to `opencode/minimax-m2.5-free` unless overridden by repository variable.
 
@@ -158,5 +155,5 @@ Workflow file: `.github/workflows/review-check.yml`
 - `packages/config` env/config parsing.
 - `packages/opencode-runner` OpenCode report generation with locked permissions.
 - `packages/github-review` GitHub REST helpers for PR metadata and file diffs.
-- `packages/agent-code-review` report parsing, previous-run comparison, and policy evaluation.
+- `packages/agent-code-review` report parsing and policy evaluation.
 - `packages/prompts` publishable prompt package (`@octavio.bot/prompts`).
