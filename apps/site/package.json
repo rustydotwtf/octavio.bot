@@ -11,7 +11,8 @@
     "smoke": "bun run scripts/smoke.ts",
     "test": "bun test",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "fix": "ultracite fix"
+    "fix": "ultracite fix",
+    "sync": "bun run scripts/sync-prompts.ts"
   },
   "dependencies": {
     "idcmd": "^0.0.11",

@@ -24,6 +24,7 @@ Prompt authoring and packaging:
 
 - Author prompt markdown only in `packages/prompts/prompts/*.md`
 - `apps/review-bot-cli/prompts/` is generated during `build`/`prepack` for npm tarballs
+- `apps/site/content/prompts-*.md` is generated during `bun run sync` for site docs pages
 
 ## App Documentation
 
@@ -43,7 +44,7 @@ bun run test
 ```
 
 Root `check`, `build`, and `test` commands are orchestrated via Turborepo (`turbo run ...`).
-Root `sync` runs workspace sync tasks (currently prompt bundling for the review CLI).
+Root `sync` runs workspace sync tasks (prompt bundling for the review CLI and generated prompt docs for the site).
 
 Useful workflow commands:
 
