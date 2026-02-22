@@ -8,7 +8,7 @@
     },
     "sync": {
       "inputs": ["$TURBO_DEFAULT$", "../../packages/prompts/prompts/*.md"],
-      "outputs": ["prompts/**"]
+      "outputs": ["prompts/**", "content/prompts-*.md"]
     },
     "check": {
       "dependsOn": ["^check"],

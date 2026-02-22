@@ -30,7 +30,7 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version-file: .bun-version
 
       - name: Run review check
         timeout-minutes: 8
@@ -98,7 +98,7 @@ jobs:
           path: artifacts/confidence.json
           if-no-files-found: ignore
 
-      - name: Upload result artifact
+      - name: Upload result artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:

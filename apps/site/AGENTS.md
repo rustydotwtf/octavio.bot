@@ -11,6 +11,7 @@ Scope: applies to files under `apps/site`.
 ## Source of Truth
 
 - Page content lives in `content/*.md`.
+- Prompt source markdown lives in `../../packages/prompts/prompts/*.md`; `content/prompts-*.md` is generated via sync.
 - Shared shell/layout behavior lives in `src/ui/` and `styles/tailwind.css`.
 - Site-level config lives in `site.jsonc`.
 
@@ -18,10 +19,14 @@ Scope: applies to files under `apps/site`.
 
 Run from repository root:
 
+- `bun run site:dev`
+- `bun run site:sync:watch`
+- `bun run --cwd apps/site watch:prompts`
 - `bun run --cwd apps/site dev`
 - `bun run --cwd apps/site build`
 - `bun run --cwd apps/site preview`
 - `bun run --cwd apps/site check`
+- `bun run --cwd apps/site sync`
 
 ## Deployment
 

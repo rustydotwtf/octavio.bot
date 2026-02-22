@@ -12,7 +12,10 @@
     // },
   },
   "baseUrl": "https://octavio.bot",
-  "groups": [{ "id": "main", "label": "Navigation", "order": 1 }],
+  "groups": [
+    { "id": "main", "label": "Navigation", "order": 1 },
+    { "id": "review", "label": "Review", "order": 2 },
+  ],
   "search": {
     "scope": "full",
   },
