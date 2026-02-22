@@ -12,7 +12,8 @@
     "test": "bun test",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "fix": "ultracite fix",
-    "sync": "bun run scripts/sync-prompts.ts"
+    "sync": "bun run scripts/sync-prompts.ts",
+    "watch:prompts": "bun run scripts/watch-prompts.ts"
   },
   "dependencies": {
     "idcmd": "^0.0.11",

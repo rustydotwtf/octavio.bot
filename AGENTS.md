@@ -192,7 +192,10 @@ Notes:
 
 ### Common Commands
 
+- Run default root dev workflow (currently site): `bun run dev`
 - Run local source bot: `bun run review-bot --owner <owner> --repo <repo> --pr <number> [--instructions /absolute/or/workspace/path.md] [--instructions-profile <name>] [--artifact-execution agent|host] [--install-opencode] --workdir .`
+- Run site dev with prompt sync watch from root: `bun run site:dev`
+- Watch site prompt sync only from root: `bun run site:sync:watch`
 - Run site locally: `bun run --cwd apps/site dev`
 - Build site: `bun run --cwd apps/site build`
 - Deploy site to Vercel: `bun run --cwd apps/site deploy`

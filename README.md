@@ -48,9 +48,12 @@ Root `sync` runs workspace sync tasks (prompt bundling for the review CLI and ge
 
 Useful workflow commands:
 
+- Run default root dev workflow (currently site): `bun run dev`
 - Local review CLI source run: `bun run review-bot ...`
 - Build publishable review CLI: `bun run review-cli:build`
-- Run site locally: `bun run --cwd apps/site dev`
+- Run site locally with prompt sync watch: `bun run site:dev`
+- Watch prompt sync only (refresh browser manually): `bun run site:sync:watch`
+- Run site locally (app command): `bun run --cwd apps/site dev`
 - Build site: `bun run --cwd apps/site build`
 - Deploy site (Vercel): `bun run --cwd apps/site deploy`
 - Initialize Octavio files in any repo: `bunx --bun @octavio.bot/review@latest init --workdir .`

@@ -1,5 +1,5 @@
 ---
-title: Products
+title: octavio.bot
 group: main
 order: 1
 icon: home

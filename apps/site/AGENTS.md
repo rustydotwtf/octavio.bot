@@ -19,6 +19,9 @@ Scope: applies to files under `apps/site`.
 
 Run from repository root:
 
+- `bun run site:dev`
+- `bun run site:sync:watch`
+- `bun run --cwd apps/site watch:prompts`
 - `bun run --cwd apps/site dev`
 - `bun run --cwd apps/site build`
 - `bun run --cwd apps/site preview`

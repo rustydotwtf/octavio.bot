@@ -8,11 +8,16 @@ From repository root:
 
 ```bash
 bun install
-bun run --cwd apps/site dev
+bun run site:dev
 ```
+
+`site:dev` runs a prompt watcher plus the site dev server. Prompt markdown edits regenerate site content automatically; refresh the browser to see changes.
 
 Useful app commands:
 
+- `bun run site:dev`
+- `bun run site:sync:watch`
+- `bun run --cwd apps/site watch:prompts`
 - `bun run --cwd apps/site build`
 - `bun run --cwd apps/site preview`
 - `bun run --cwd apps/site check`
