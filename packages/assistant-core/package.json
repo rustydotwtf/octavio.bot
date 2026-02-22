@@ -1,0 +1,16 @@
+{
+  "name": "@octavio.bot/assistant-core",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@ai-sdk/openai": "^2.0.35",
+    "ai": "^5.0.52",
+    "zod": "^4.1.12"
+  }
+}

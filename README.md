@@ -11,6 +11,7 @@ Current app:
 
 - `apps/review-bot-cli` - publishable PR review CLI package (`@octavio.bot/review`)
 - `apps/site` - static product site for `octavio.bot`
+- `apps/assistant-api` - local Elysia chat assistant API with SQLite history
 
 Current shared packages:
 
@@ -19,6 +20,7 @@ Current shared packages:
 - `packages/github-review` - GitHub PR metadata and changed-file helpers
 - `packages/agent-code-review` - review orchestration and policy evaluation
 - `packages/prompts` - publishable prompt package (`@octavio.bot/prompts`)
+- `packages/assistant-core` - reusable assistant runtime (chat runner, file tools, SQLite store)
 
 Prompt authoring and packaging:
 
@@ -32,6 +34,7 @@ App-specific setup, usage, and behavior live with each app.
 
 - Review CLI docs: `apps/review-bot-cli/README.md`
 - Site docs: `apps/site/README.md`
+- Assistant API docs: `apps/assistant-api/README.md`
 
 ## Development Commands
 
@@ -49,6 +52,7 @@ Root `sync` runs workspace sync tasks (prompt bundling for the review CLI and ge
 Useful workflow commands:
 
 - Run default root dev workflow (currently site): `bun run dev`
+- Run local assistant API: `bun run assistant:dev`
 - Local review CLI source run: `bun run review-bot ...`
 - Build publishable review CLI: `bun run review-cli:build`
 - Run site locally with prompt sync watch: `bun run site:dev`

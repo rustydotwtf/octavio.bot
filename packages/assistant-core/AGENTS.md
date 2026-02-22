@@ -1,0 +1,19 @@
+# Assistant Core Agent Notes
+
+Scope: applies to files under `packages/assistant-core`.
+
+## Package Intent
+
+- Shared local assistant runtime.
+- Keep APIs small and easy to evolve.
+- Add abstractions only when there are at least two real call sites.
+
+## Runtime Design
+
+- `ChatStore` owns SQLite persistence.
+- `AssistantRunner` owns model execution and streaming behavior.
+- tools should be pure helpers when possible, with thin wrappers for call logging.
+
+## Testing
+
+- Prefer focused unit tests for file tools and persistence helpers.

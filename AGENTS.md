@@ -178,11 +178,13 @@ This repository now uses a Bun workspace monorepo:
 
 - `apps/review-bot-cli` - publishable CLI package (`@octavio.bot/review`, binary `octavio-review`)
 - `apps/site` - static product site for `octavio.bot` (idcmd-based)
+- `apps/assistant-api` - local-first Elysia chat assistant API (Vercel AI SDK + SQLite)
 - `packages/config` - runtime env and CLI config parsing
 - `packages/opencode-runner` - OpenCode SDK wrapper for artifact-schema generation and validation retries
 - `packages/github-review` - GitHub REST helpers for PR metadata and changed files
 - `packages/agent-code-review` - report parsing and instruction-driven policy evaluation
 - `packages/prompts` - publishable prompt package (`@octavio.bot/prompts`) and helper utilities
+- `packages/assistant-core` - reusable assistant runtime (chat runner, file tools, SQLite persistence)
 
 Notes:
 
@@ -193,6 +195,7 @@ Notes:
 ### Common Commands
 
 - Run default root dev workflow (currently site): `bun run dev`
+- Run local assistant API: `bun run assistant:dev`
 - Run local source bot: `bun run review-bot --owner <owner> --repo <repo> --pr <number> [--instructions /absolute/or/workspace/path.md] [--instructions-profile <name>] [--artifact-execution agent|host] [--install-opencode] --workdir .`
 - Run site dev with prompt sync watch from root: `bun run site:dev`
 - Watch site prompt sync only from root: `bun run site:sync:watch`
@@ -220,6 +223,7 @@ Task orchestration notes:
 ### Runtime Expectations
 
 - `.env` should include `GITHUB_TOKEN`, OpenCode connection settings (`OPENCODE_HOSTNAME`, `OPENCODE_PORT`), and `OPENCODE_API_KEY` for OpenCode Zen; `OPENCODE_MODEL` is optional
+- Assistant API local env should include `OPENAI_API_KEY`; optional overrides are `ASSISTANT_MODEL`, `ASSISTANT_DB_PATH`, and `PORT`
 - CLI requires `opencode` binary: local mode is detect-only; CI mode auto-installs when missing; `--install-opencode` forces local auto-install
 - Default artifact execution is `agent` (OpenCode can write artifacts in-workspace); `external_directory` remains denied
 - Keep OpenCode prompts constrained to the provided workspace directory
@@ -240,5 +244,6 @@ Task orchestration notes:
 ## Linked Context
 
 - @README.md
+- @apps/assistant-api/README.md
 - @apps/review-bot-cli/README.md
 - @apps/site/README.md
