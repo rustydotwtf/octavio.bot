@@ -9,7 +9,7 @@ export const settings = {
   assistant: {
     databasePath: defaultAssistantDbPath,
     debugLogMb: 64,
-    model: "openai/gpt-5-mini",
+    model: "openai/gpt-5",
   },
   assistantApi: {
     port: 4100,
