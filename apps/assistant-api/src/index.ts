@@ -5,29 +5,17 @@ import {
 } from "@octavio.bot/assistant-core";
 import { Elysia } from "elysia";
 
-const DEFAULT_PORT = 4100;
-const DEFAULT_DB_PATH =
-  process.env.HOME && process.env.HOME.length > 0
-    ? `${process.env.HOME}/.octavio/assistant.sqlite`
-    : ".octavio/assistant.sqlite";
+const { settings } = await import(
+  new URL("../../../settings.ts", import.meta.url).toString()
+);
 
-const parsePort = (value: string | undefined): number => {
-  if (!value) {
-    return DEFAULT_PORT;
-  }
+const { assistant, assistantApi } = settings;
 
-  const parsed = Number.parseInt(value, 10);
-  if (Number.isNaN(parsed) || parsed <= 0) {
-    return DEFAULT_PORT;
-  }
-
-  return parsed;
-};
-
-const databasePath = process.env.ASSISTANT_DB_PATH ?? DEFAULT_DB_PATH;
-const store = new ChatStore(databasePath);
+const store = new ChatStore(assistant.databasePath, {
+  debugLogMb: assistant.debugLogMb,
+});
 const runner = new AssistantRunner({
-  defaultModel: process.env.ASSISTANT_MODEL,
+  defaultModel: assistant.model,
   store,
   workspaceDirectory: process.cwd(),
 });
@@ -56,14 +44,17 @@ const app = new Elysia()
       };
     }
 
+    const request = parsed.data;
+    const { channel, ...rest } = request;
+
     const run = runner.run({
-      ...parsed.data,
-      channel: parsed.data.channel ?? "api",
+      ...rest,
+      channel: channel ?? "api",
     });
     return run.response;
   });
 
-const port = parsePort(process.env.PORT);
+const { port } = assistantApi;
 app.listen(port);
 
 process.stdout.write(`assistant-api listening on http://localhost:${port}\n`);

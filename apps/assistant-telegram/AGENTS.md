@@ -22,7 +22,7 @@ Run from repository root:
 - Supports `polling` and `webhook` modes.
 - Polling should be conservative (long-poll timeout + bounded retry backoff).
 - Webhook endpoint must require `TELEGRAM_WEBHOOK_SECRET`.
-- Use `TELEGRAM_ALLOWED_CHAT_IDS` when restricting access.
+- Use `settings.assistantTelegram.allowedChatIds` when restricting access.
 
 ## Documentation Sync
 

@@ -15,7 +15,7 @@ Scope: applies to files under `packages/assistant-core`.
 - `ChatStore` also stores channel/message metadata so interfaces can render the
   same conversation differently without changing LLM context shape.
 - `ChatStore` stores bounded debug telemetry in SQLite (`debug_events`) as a
-  shared ring buffer controlled by `ASSISTANT_DEBUG_LOG_MB`.
+  shared ring buffer controlled by `ChatStore` `debugLogMb` configuration.
 - `AssistantRunner` owns model execution and streaming behavior.
 - tools should be pure helpers when possible, with thin wrappers for call logging.
 

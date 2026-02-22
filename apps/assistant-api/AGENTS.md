@@ -22,7 +22,7 @@ Run from repository root:
 - Uses Vercel AI SDK through `@octavio.bot/assistant-core`.
 - Persists chat history, tool calls, and the active conversation pointer in SQLite.
 - Shares one active conversation with other interfaces (for example Telegram) when
-  they use the same `ASSISTANT_DB_PATH`.
+  they use the same `settings.assistant.databasePath` value.
 - `POST /chat` with `"/new"` rotates the shared active conversation.
 
 ## Documentation Sync

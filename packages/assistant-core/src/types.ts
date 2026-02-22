@@ -6,7 +6,6 @@ export const chatRequestInput = z.object({
   conversationId: z.string().min(1).optional(),
   message: z.string().min(1),
   messageMetadata: z.record(z.string(), z.unknown()).optional(),
-  model: z.string().min(1).optional(),
 });
 
 export type ChatRequestInput = z.infer<typeof chatRequestInput>;

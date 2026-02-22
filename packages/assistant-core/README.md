@@ -12,6 +12,6 @@ Includes:
 ## Debug Logging
 
 - Detailed events are stored in the shared SQLite `debug_events` table.
-- The table is a rolling buffer capped by `ASSISTANT_DEBUG_LOG_MB` (default `64`).
-- Set `ASSISTANT_DEBUG_LOG_MB=0` to disable debug event persistence.
+- The table is a rolling buffer capped by `ChatStore` `debugLogMb` (default `64`).
+- Set `debugLogMb` to `0` to disable debug event persistence.
 - Events include model middleware telemetry (`llm.*`) and runtime lifecycle events (`assistant.*`).

@@ -5,7 +5,7 @@ import type { ChatStore } from "./db";
 import { buildAssistantTools } from "./tools";
 import type { ChatRequestInput } from "./types";
 
-const DEFAULT_MODEL = "openai/gpt-5-mini";
+const DEFAULT_MODEL = "zai/glm-5";
 const DEFAULT_CHANNEL = "api";
 
 interface AssistantRunnerOptions {
@@ -113,7 +113,7 @@ export class AssistantRunner {
       role: message.role,
     }));
 
-    const modelName = input.model ?? this.defaultModel;
+    const modelName = this.defaultModel;
     const requestId = crypto.randomUUID();
 
     const wrappedModel = wrapLanguageModel({

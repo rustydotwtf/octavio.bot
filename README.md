@@ -69,8 +69,9 @@ Useful workflow commands:
 ## Environment
 
 - Copy `.env.example` to `.env` for local setup.
-- Assistant services use Vercel AI Gateway via `AI_GATEWAY_API_KEY`.
-- Assistant services can persist bounded debug telemetry in SQLite via `ASSISTANT_DEBUG_LOG_MB` (default `64`, set `0` to disable).
+- `.env` stores secrets only (`AI_GATEWAY_API_KEY`, `TELEGRAM_BOT_TOKEN`, optional `TELEGRAM_WEBHOOK_SECRET`).
+- Assistant non-secret runtime settings live in root `settings.ts`.
+- Assistant model is fixed to `zai/glm-5` in `settings.ts`.
 
 ## CI
 

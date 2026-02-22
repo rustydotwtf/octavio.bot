@@ -1,16 +1,16 @@
 import { AssistantRunner, ChatStore } from "@octavio.bot/assistant-core";
 import { Elysia } from "elysia";
 
-const DEFAULT_PORT = 4200;
-const DEFAULT_DB_PATH =
-  process.env.HOME && process.env.HOME.length > 0
-    ? `${process.env.HOME}/.octavio/assistant.sqlite`
-    : ".octavio/assistant.sqlite";
-const DEFAULT_POLL_TIMEOUT_SECONDS = 30;
-const DEFAULT_POLL_IDLE_DELAY_MS = 300;
-const POLL_OFFSET_STATE_KEY = "telegram_poll_offset";
+const { settings } = await import(
+  new URL("../../../settings.ts", import.meta.url).toString()
+);
 
-type TelegramMode = "auto" | "polling" | "webhook";
+const POLL_OFFSET_STATE_KEY = "telegram_poll_offset";
+const EMPTY_RESPONSE_MESSAGE = "I couldn't generate a reply. Please try again.";
+const ERROR_RESPONSE_MESSAGE =
+  "I hit an error while generating a reply. Please try again.";
+
+type TelegramMode = "polling" | "webhook";
 
 interface TelegramMessage {
   chat: {
@@ -28,65 +28,6 @@ interface TelegramUpdate {
   message?: TelegramMessage;
   update_id: number;
 }
-
-const parseNumber = (
-  value: string | undefined,
-  fallback: number,
-  minValue: number
-): number => {
-  if (!value) {
-    return fallback;
-  }
-
-  const parsed = Number.parseInt(value, 10);
-  if (Number.isNaN(parsed) || parsed < minValue) {
-    return fallback;
-  }
-
-  return parsed;
-};
-
-const parseBoolean = (value: string | undefined): boolean => {
-  if (!value) {
-    return false;
-  }
-
-  return value === "1" || value.toLowerCase() === "true";
-};
-
-const parseAllowedChatIds = (value: string | undefined): Set<number> | null => {
-  if (!value) {
-    return null;
-  }
-
-  const values = value
-    .split(",")
-    .map((item) => item.trim())
-    .filter((item) => item.length > 0)
-    .map((item) => Number.parseInt(item, 10))
-    .filter((item) => !Number.isNaN(item));
-
-  if (values.length === 0) {
-    return null;
-  }
-
-  return new Set(values);
-};
-
-const parseMode = (
-  value: string | undefined,
-  webhookUrl: string | undefined
-): TelegramMode => {
-  if (!value || value === "auto") {
-    return webhookUrl ? "webhook" : "polling";
-  }
-
-  if (value === "polling" || value === "webhook") {
-    return value;
-  }
-
-  return webhookUrl ? "webhook" : "polling";
-};
 
 const readBodyText = async (response: Response): Promise<string> => {
   try {
@@ -106,31 +47,33 @@ if (!token) {
   throw new Error("Missing TELEGRAM_BOT_TOKEN environment variable.");
 }
 
-const databasePath = process.env.ASSISTANT_DB_PATH ?? DEFAULT_DB_PATH;
-const store = new ChatStore(databasePath);
+const { assistant, assistantTelegram } = settings;
+
+const store = new ChatStore(assistant.databasePath, {
+  debugLogMb: assistant.debugLogMb,
+});
 const runner = new AssistantRunner({
-  defaultModel: process.env.ASSISTANT_MODEL,
+  defaultModel: assistant.model,
   store,
   workspaceDirectory: process.cwd(),
 });
 
-const allowedChatIds = parseAllowedChatIds(
-  process.env.TELEGRAM_ALLOWED_CHAT_IDS
-);
-const webhookUrl = process.env.TELEGRAM_WEBHOOK_URL;
+const {
+  allowedChatIds: configuredAllowedChatIds,
+  mode,
+  pollIdleDelayMs,
+  pollTimeoutSeconds,
+  port: webhookPort,
+  setWebhookOnStartup: shouldSetWebhook,
+  webhookUrl,
+} = assistantTelegram;
+
+const allowedChatIds =
+  configuredAllowedChatIds.length > 0
+    ? new Set(configuredAllowedChatIds)
+    : null;
 const webhookSecret = process.env.TELEGRAM_WEBHOOK_SECRET;
-const mode = parseMode(process.env.TELEGRAM_MODE, webhookUrl);
-const shouldSetWebhook = parseBoolean(process.env.TELEGRAM_SET_WEBHOOK);
-const pollTimeoutSeconds = parseNumber(
-  process.env.TELEGRAM_POLL_TIMEOUT_SECONDS,
-  DEFAULT_POLL_TIMEOUT_SECONDS,
-  1
-);
-const pollIdleDelayMs = parseNumber(
-  process.env.TELEGRAM_POLL_IDLE_DELAY_MS,
-  DEFAULT_POLL_IDLE_DELAY_MS,
-  0
-);
+const telegramMode: TelegramMode = mode;
 
 const telegramApiBase = `https://api.telegram.org/bot${token}`;
 
@@ -203,15 +146,6 @@ const shouldHandleChat = (chatId: number): boolean => {
   return allowedChatIds.has(chatId);
 };
 
-const compactAssistantText = (text: string): string => {
-  const trimmed = text.trim();
-  if (trimmed.length > 0) {
-    return trimmed;
-  }
-
-  return "Done.";
-};
-
 const processTelegramMessage = async (
   message: TelegramMessage,
   updateId: number
@@ -249,7 +183,22 @@ const processTelegramMessage = async (
     },
   });
 
-  const replyText = compactAssistantText(await run.response.text());
+  let replyText = EMPTY_RESPONSE_MESSAGE;
+
+  try {
+    const generatedResponseText = await run.response.text();
+    const generatedText = generatedResponseText.trim();
+    if (generatedText.length > 0) {
+      replyText = generatedText;
+    }
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    process.stderr.write(
+      `assistant reply error (chat=${chatId}, update=${updateId}): ${errorMessage}\n`
+    );
+    replyText = ERROR_RESPONSE_MESSAGE;
+  }
+
   await sendTelegramMessage(chatId, replyText);
 };
 
@@ -264,7 +213,7 @@ const processUpdate = async (update: TelegramUpdate): Promise<void> => {
 const configureWebhook = async (): Promise<void> => {
   if (!webhookUrl) {
     throw new Error(
-      "TELEGRAM_WEBHOOK_URL is required when TELEGRAM_SET_WEBHOOK=true."
+      "settings.assistantTelegram.webhookUrl is required when setWebhookOnStartup=true."
     );
   }
 
@@ -326,8 +275,6 @@ const runWebhook = (): void => {
     throw new Error("TELEGRAM_WEBHOOK_SECRET is required in webhook mode.");
   }
 
-  const port = parseNumber(process.env.PORT, DEFAULT_PORT, 1);
-
   const app = new Elysia()
     .get("/health", () => ({ mode: "webhook", ok: true }))
     .post("/telegram/webhook/:secret", async ({ body, params, set }) => {
@@ -341,9 +288,9 @@ const runWebhook = (): void => {
       return { ok: true };
     });
 
-  app.listen(port);
+  app.listen(webhookPort);
   process.stdout.write(
-    `assistant-telegram webhook mode listening on http://localhost:${port}\n`
+    `assistant-telegram webhook mode listening on http://localhost:${webhookPort}\n`
   );
 };
 
@@ -352,7 +299,7 @@ if (shouldSetWebhook) {
   process.stdout.write("assistant-telegram webhook configured\n");
 }
 
-if (mode === "webhook") {
+if (telegramMode === "webhook") {
   runWebhook();
 } else {
   await runPolling();

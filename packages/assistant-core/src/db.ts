@@ -21,6 +21,10 @@ interface TotalBytesRow {
   totalBytes: number;
 }
 
+interface ChatStoreOptions {
+  debugLogMb?: number;
+}
+
 interface DebugEventRow {
   channel: string;
   conversationId: string | null;
@@ -38,19 +42,29 @@ interface DebugEventRow {
 const nowIso = (): string => new Date().toISOString();
 const ACTIVE_CONVERSATION_ID_KEY = "active_conversation_id";
 const DEFAULT_DEBUG_LOG_MAX_BYTES = 64 * 1024 * 1024;
+const DEFAULT_SQLITE_BUSY_TIMEOUT_MS = 5000;
 const textEncoder = new TextEncoder();
 
-const parseDebugLogMaxBytes = (value: string | undefined): number => {
-  if (!value || value.trim().length === 0) {
+const isSqliteBusyError = (error: unknown): boolean => {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+
+  const errorCode = (error as { code?: unknown }).code;
+  const errorErrno = (error as { errno?: unknown }).errno;
+  return errorCode === "SQLITE_BUSY" || errorErrno === 5;
+};
+
+const parseDebugLogMaxBytes = (value: number | undefined): number => {
+  if (value === undefined) {
     return DEFAULT_DEBUG_LOG_MAX_BYTES;
   }
 
-  const parsedMegabytes = Number.parseInt(value, 10);
-  if (Number.isNaN(parsedMegabytes) || parsedMegabytes < 0) {
+  if (!Number.isInteger(value) || value < 0) {
     return DEFAULT_DEBUG_LOG_MAX_BYTES;
   }
 
-  return parsedMegabytes * 1024 * 1024;
+  return value * 1024 * 1024;
 };
 
 const getDirectoryPath = (filePath: string): string => {
@@ -92,13 +106,18 @@ export class ChatStore {
   private readonly db: Database;
   private readonly debugLogMaxBytes: number;
 
-  public constructor(dbPath: string) {
+  public constructor(dbPath: string, options: ChatStoreOptions = {}) {
     ensureDatabaseDirectory(dbPath);
     this.db = new Database(dbPath, { create: true, strict: true });
-    this.debugLogMaxBytes = parseDebugLogMaxBytes(
-      process.env.ASSISTANT_DEBUG_LOG_MB
-    );
-    this.db.run("PRAGMA journal_mode = WAL;");
+    this.debugLogMaxBytes = parseDebugLogMaxBytes(options.debugLogMb);
+    this.db.run(`PRAGMA busy_timeout = ${DEFAULT_SQLITE_BUSY_TIMEOUT_MS};`);
+    try {
+      this.db.run("PRAGMA journal_mode = WAL;");
+    } catch (error: unknown) {
+      if (!isSqliteBusyError(error)) {
+        throw error;
+      }
+    }
     this.db.run("PRAGMA foreign_keys = ON;");
     this.setup();
   }

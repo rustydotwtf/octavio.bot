@@ -36,8 +36,7 @@ Default server URL: `http://localhost:4100`
   "channel": "optional-source-channel",
   "channelMetadata": { "optional": "metadata" },
   "message": "read README.md",
-  "messageMetadata": { "optional": "metadata" },
-  "model": "optional-model-name"
+  "messageMetadata": { "optional": "metadata" }
 }
 ```
 
@@ -57,10 +56,13 @@ Responses include `x-conversation-id`.
 ## Environment
 
 - `AI_GATEWAY_API_KEY` (required)
-- `ASSISTANT_MODEL` (optional, default `openai/gpt-5-mini`)
-- `ASSISTANT_DB_PATH` (optional, default `~/.octavio/assistant.sqlite`)
-- `ASSISTANT_DEBUG_LOG_MB` (optional, default `64`, set `0` to disable debug events)
-- `PORT` (optional, default `4100`)
+
+All assistant non-secret runtime defaults now come from root `settings.ts`.
+
+- `assistant.model` is fixed to `zai/glm-5`
+- `assistant.databasePath` defaults to `~/.octavio/assistant.sqlite`
+- `assistant.debugLogMb` defaults to `64` (`0` disables debug-event writes)
+- `assistantApi.port` defaults to `4100`
 
 ## Built-in tools
 
@@ -70,13 +72,14 @@ Responses include `x-conversation-id`.
 ## Troubleshooting Debug Logs
 
 When model/tool behavior looks wrong, inspect `debug_events` in the shared SQLite DB.
+If you changed `settings.assistant.databasePath`, use that path instead.
 
 ```bash
-sqlite3 "$ASSISTANT_DB_PATH" "SELECT created_at, source, event_type, request_id, step_id FROM debug_events ORDER BY created_at DESC LIMIT 50;"
+sqlite3 "$HOME/.octavio/assistant.sqlite" "SELECT created_at, source, event_type, request_id, step_id FROM debug_events ORDER BY created_at DESC LIMIT 50;"
 ```
 
 Check current debug log size:
 
 ```bash
-sqlite3 "$ASSISTANT_DB_PATH" "SELECT ROUND(COALESCE(SUM(payload_bytes),0) / 1024.0 / 1024.0, 2) AS mb FROM debug_events;"
+sqlite3 "$HOME/.octavio/assistant.sqlite" "SELECT ROUND(COALESCE(SUM(payload_bytes),0) / 1024.0 / 1024.0, 2) AS mb FROM debug_events;"
 ```
