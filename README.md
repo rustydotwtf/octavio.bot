@@ -48,15 +48,15 @@ bun run build
 bun run test
 ```
 
-Root `check`, `build`, and `test` commands are orchestrated via Turborepo (`turbo run ...`).
+Root `dev`, `check`, `build`, and `test` commands are orchestrated via Turborepo (`turbo run ...`).
 Root `sync` runs workspace sync tasks (prompt bundling for the review CLI and generated prompt docs for the site).
 
 Useful workflow commands:
 
-- Run default root dev workflow (currently site): `bun run dev`
-- Run local assistant API: `bun run assistant:dev`
+- Run full local app stack (all app `dev` scripts): `bun run dev`
+- Run local assistant API: `bun run assistant:api:dev`
 - Run local Telegram assistant adapter: `bun run assistant:telegram:dev`
-- Run assistant API + Telegram together: `bun run assistant:dev:all`
+- Run assistant API + Telegram together: `bun run assistant:dev`
 - Local review CLI source run: `bun run review-bot ...`
 - Build publishable review CLI: `bun run review-cli:build`
 - Run site locally with prompt sync watch: `bun run site:dev`

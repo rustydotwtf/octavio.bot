@@ -2,7 +2,10 @@ import { AssistantRunner, ChatStore } from "@octavio.bot/assistant-core";
 import { Elysia } from "elysia";
 
 const DEFAULT_PORT = 4200;
-const DEFAULT_DB_PATH = ".octavio/assistant.sqlite";
+const DEFAULT_DB_PATH =
+  process.env.HOME && process.env.HOME.length > 0
+    ? `${process.env.HOME}/.octavio/assistant.sqlite`
+    : ".octavio/assistant.sqlite";
 const DEFAULT_POLL_TIMEOUT_SECONDS = 30;
 const DEFAULT_POLL_IDLE_DELAY_MS = 300;
 const POLL_OFFSET_STATE_KEY = "telegram_poll_offset";

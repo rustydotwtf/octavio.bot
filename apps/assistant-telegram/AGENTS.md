@@ -15,7 +15,7 @@ Scope: applies to files under `apps/assistant-telegram`.
 Run from repository root:
 
 - `bun run assistant:telegram:dev`
-- `bun run assistant:dev:all`
+- `bun run assistant:dev`
 
 ## Runtime
 

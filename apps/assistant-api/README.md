@@ -11,6 +11,12 @@ interfaces share the same active conversation.
 From repository root:
 
 ```bash
+bun run assistant:api:dev
+```
+
+Run API + Telegram together:
+
+```bash
 bun run assistant:dev
 ```
 
@@ -52,8 +58,8 @@ Responses include `x-conversation-id`.
 
 - `AI_GATEWAY_API_KEY` (required)
 - `AI_GATEWAY_BASE_URL` (optional, default `https://ai-gateway.vercel.sh/v1`)
-- `ASSISTANT_MODEL` (optional, default `openai/gpt-5-mini`)
-- `ASSISTANT_DB_PATH` (optional, default `.octavio/assistant.sqlite`)
+- `ASSISTANT_MODEL` (optional, default `anthropic/claude-haiku-4.5`)
+- `ASSISTANT_DB_PATH` (optional, default `~/.octavio/assistant.sqlite`)
 - `PORT` (optional, default `4100`)
 
 ## Built-in tools

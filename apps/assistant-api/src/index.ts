@@ -6,7 +6,10 @@ import {
 import { Elysia } from "elysia";
 
 const DEFAULT_PORT = 4100;
-const DEFAULT_DB_PATH = ".octavio/assistant.sqlite";
+const DEFAULT_DB_PATH =
+  process.env.HOME && process.env.HOME.length > 0
+    ? `${process.env.HOME}/.octavio/assistant.sqlite`
+    : ".octavio/assistant.sqlite";
 
 const parsePort = (value: string | undefined): number => {
   if (!value) {

@@ -13,6 +13,7 @@ Scope: applies to files under `apps/assistant-api`.
 Run from repository root:
 
 - `bun run assistant:dev`
+- `bun run assistant:api:dev`
 - `bun run --cwd apps/assistant-api dev`
 
 ## Runtime

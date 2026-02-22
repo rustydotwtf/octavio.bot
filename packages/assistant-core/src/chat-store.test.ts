@@ -77,7 +77,7 @@ describe("assistant runner /new command", () => {
     const dbPath = createDbPath();
     const store = new ChatStore(dbPath);
     const runner = new AssistantRunner({
-      defaultModel: "openai/gpt-5-mini",
+      defaultModel: "anthropic/claude-haiku-4.5",
       store,
       workspaceDirectory: process.cwd(),
     });

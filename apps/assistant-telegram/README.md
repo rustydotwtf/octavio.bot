@@ -15,7 +15,7 @@ bun run assistant:telegram:dev
 Run both API + Telegram locally:
 
 ```bash
-bun run assistant:dev:all
+bun run assistant:dev
 ```
 
 ## Modes
@@ -36,8 +36,8 @@ bun run assistant:dev:all
 - `TELEGRAM_SET_WEBHOOK` (optional `true|false`, default `false`)
 - `TELEGRAM_POLL_TIMEOUT_SECONDS` (optional, default `30`)
 - `TELEGRAM_POLL_IDLE_DELAY_MS` (optional, default `300`)
-- `ASSISTANT_MODEL` (optional, default `openai/gpt-5-mini`)
-- `ASSISTANT_DB_PATH` (optional, default `.octavio/assistant.sqlite`)
+- `ASSISTANT_MODEL` (optional, default `anthropic/claude-haiku-4.5`)
+- `ASSISTANT_DB_PATH` (optional, default `~/.octavio/assistant.sqlite`)
 - `PORT` (optional, webhook mode only, default `4200`)
 
 ## Behavior

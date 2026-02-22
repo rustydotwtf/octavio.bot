@@ -20,10 +20,46 @@ interface TableInfoRow {
 const nowIso = (): string => new Date().toISOString();
 const ACTIVE_CONVERSATION_ID_KEY = "active_conversation_id";
 
+const getDirectoryPath = (filePath: string): string => {
+  const separatorIndex = Math.max(
+    filePath.lastIndexOf("/"),
+    filePath.lastIndexOf("\\")
+  );
+  if (separatorIndex <= 0) {
+    return ".";
+  }
+
+  return filePath.slice(0, separatorIndex);
+};
+
+const ensureDatabaseDirectory = (dbPath: string): void => {
+  if (dbPath === ":memory:") {
+    return;
+  }
+
+  const directoryPath = getDirectoryPath(dbPath);
+  if (directoryPath === ".") {
+    return;
+  }
+
+  const result = Bun.spawnSync(["mkdir", "-p", directoryPath], {
+    stderr: "pipe",
+    stdout: "pipe",
+  });
+
+  if (result.exitCode !== 0) {
+    const stderr = new TextDecoder().decode(result.stderr).trim();
+    throw new Error(
+      `Failed to create SQLite directory "${directoryPath}": ${stderr || "unknown error"}`
+    );
+  }
+};
+
 export class ChatStore {
   private readonly db: Database;
 
   public constructor(dbPath: string) {
+    ensureDatabaseDirectory(dbPath);
     this.db = new Database(dbPath, { create: true, strict: true });
     this.db.run("PRAGMA journal_mode = WAL;");
     this.db.run("PRAGMA foreign_keys = ON;");
