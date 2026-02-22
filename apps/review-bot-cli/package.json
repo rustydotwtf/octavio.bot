@@ -1,6 +1,6 @@
 {
   "name": "@octavio.bot/review",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "private": false,
   "description": "CLI for OpenCode-powered pull request review checks",
   "homepage": "https://github.com/rustydotwtf/octavio.bot/tree/main/apps/review-bot-cli",
@@ -13,7 +13,7 @@
     "directory": "apps/review-bot-cli"
   },
   "bin": {
-    "octavio-review": "./dist/index.mjs"
+    "octavio-review": "dist/index.mjs"
   },
   "files": [
     "dist",
