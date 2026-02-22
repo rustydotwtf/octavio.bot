@@ -57,12 +57,26 @@ Responses include `x-conversation-id`.
 ## Environment
 
 - `AI_GATEWAY_API_KEY` (required)
-- `AI_GATEWAY_BASE_URL` (optional, default `https://ai-gateway.vercel.sh/v1`)
-- `ASSISTANT_MODEL` (optional, default `anthropic/claude-haiku-4.5`)
+- `ASSISTANT_MODEL` (optional, default `openai/gpt-5-mini`)
 - `ASSISTANT_DB_PATH` (optional, default `~/.octavio/assistant.sqlite`)
+- `ASSISTANT_DEBUG_LOG_MB` (optional, default `64`, set `0` to disable debug events)
 - `PORT` (optional, default `4100`)
 
 ## Built-in tools
 
 - `read_file`
 - `patch_file`
+
+## Troubleshooting Debug Logs
+
+When model/tool behavior looks wrong, inspect `debug_events` in the shared SQLite DB.
+
+```bash
+sqlite3 "$ASSISTANT_DB_PATH" "SELECT created_at, source, event_type, request_id, step_id FROM debug_events ORDER BY created_at DESC LIMIT 50;"
+```
+
+Check current debug log size:
+
+```bash
+sqlite3 "$ASSISTANT_DB_PATH" "SELECT ROUND(COALESCE(SUM(payload_bytes),0) / 1024.0 / 1024.0, 2) AS mb FROM debug_events;"
+```

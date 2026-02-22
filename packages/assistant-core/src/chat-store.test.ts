@@ -4,6 +4,7 @@ import { AssistantRunner } from "./chat-runner";
 import { ChatStore } from "./db";
 
 const createdDbPaths: string[] = [];
+const originalDebugLogMb = process.env.ASSISTANT_DEBUG_LOG_MB;
 
 const createDbPath = (): string => {
   const dbPath = `/tmp/octavio-assistant-store-${crypto.randomUUID()}.sqlite`;
@@ -23,6 +24,12 @@ afterEach(async () => {
   }
 
   createdDbPaths.length = 0;
+
+  if (originalDebugLogMb === undefined) {
+    delete process.env.ASSISTANT_DEBUG_LOG_MB;
+  } else {
+    process.env.ASSISTANT_DEBUG_LOG_MB = originalDebugLogMb;
+  }
 });
 
 describe("chat store active conversation", () => {
@@ -93,5 +100,68 @@ describe("assistant runner /new command", () => {
     );
     expect(store.getActiveConversationId()).toBe(result.conversationId);
     expect(store.listMessages(result.conversationId)).toHaveLength(0);
+  });
+});
+
+describe("debug event storage", () => {
+  it("prunes oldest debug events to stay under the byte cap", () => {
+    process.env.ASSISTANT_DEBUG_LOG_MB = "1";
+    const dbPath = createDbPath();
+    const store = new ChatStore(dbPath);
+    const conversationId = store.resolveActiveConversationId();
+    const payload = {
+      text: "x".repeat(700_000),
+    };
+
+    store.appendDebugEvent({
+      channel: "api",
+      conversationId,
+      eventType: "test.chunk",
+      payload,
+      requestId: "req-a",
+      source: "test",
+      stepId: "step-1",
+    });
+    store.appendDebugEvent({
+      channel: "api",
+      conversationId,
+      eventType: "test.chunk",
+      payload,
+      requestId: "req-a",
+      source: "test",
+      stepId: "step-2",
+    });
+    store.appendDebugEvent({
+      channel: "api",
+      conversationId,
+      eventType: "test.chunk",
+      payload,
+      requestId: "req-a",
+      source: "test",
+      stepId: "step-3",
+    });
+
+    const totalBytes = store.getDebugEventsTotalBytes();
+    const events = store.listDebugEvents(10);
+
+    expect(totalBytes).toBeLessThanOrEqual(1024 * 1024);
+    expect(events.length).toBeGreaterThan(0);
+    expect(events.length).toBeLessThan(3);
+  });
+
+  it("skips debug event writes when the cap is disabled", () => {
+    process.env.ASSISTANT_DEBUG_LOG_MB = "0";
+    const dbPath = createDbPath();
+    const store = new ChatStore(dbPath);
+
+    store.appendDebugEvent({
+      eventType: "test.disabled",
+      payload: { ok: true },
+      requestId: "req-disabled",
+      source: "test",
+    });
+
+    expect(store.getDebugEventsTotalBytes()).toBe(0);
+    expect(store.listDebugEvents(10)).toHaveLength(0);
   });
 });

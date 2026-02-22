@@ -1,5 +1,5 @@
-import { createOpenAI } from "@ai-sdk/openai";
-import { stepCountIs, streamText } from "ai";
+import { gateway } from "@ai-sdk/gateway";
+import { stepCountIs, streamText, wrapLanguageModel } from "ai";
 
 import type { ChatStore } from "./db";
 import { buildAssistantTools } from "./tools";
@@ -7,7 +7,6 @@ import type { ChatRequestInput } from "./types";
 
 const DEFAULT_MODEL = "openai/gpt-5-mini";
 const DEFAULT_CHANNEL = "api";
-const DEFAULT_GATEWAY_BASE_URL = "https://ai-gateway.vercel.sh/v1";
 
 interface AssistantRunnerOptions {
   defaultModel?: string;
@@ -36,13 +35,31 @@ const toOptionalJson = (value: unknown): string | undefined => {
   }
 };
 
+const toErrorPayload = (error: unknown): { message: string; name?: string } => {
+  if (error instanceof Error) {
+    return {
+      message: error.message,
+      name: error.name,
+    };
+  }
+
+  return {
+    message: String(error),
+  };
+};
+
+const getChunkStepId = (chunk: unknown): string | undefined => {
+  if (!chunk || typeof chunk !== "object") {
+    return undefined;
+  }
+
+  const value = (chunk as { id?: unknown }).id;
+  return typeof value === "string" ? value : undefined;
+};
+
 export class AssistantRunner {
   private readonly defaultModel: string;
   private readonly gatewayApiKey = process.env.AI_GATEWAY_API_KEY;
-  private readonly openai = createOpenAI({
-    apiKey: process.env.AI_GATEWAY_API_KEY,
-    baseURL: process.env.AI_GATEWAY_BASE_URL ?? DEFAULT_GATEWAY_BASE_URL,
-  });
   private readonly store: ChatStore;
   private readonly workspaceDirectory: string;
 
@@ -96,10 +113,208 @@ export class AssistantRunner {
       role: message.role,
     }));
 
+    const modelName = input.model ?? this.defaultModel;
+    const requestId = crypto.randomUUID();
+
+    const wrappedModel = wrapLanguageModel({
+      middleware: {
+        transformParams: ({ params }) => {
+          this.store.appendDebugEvent({
+            channel,
+            conversationId,
+            eventType: "llm.transform-params",
+            model: modelName,
+            payload: params,
+            requestId,
+            source: "llm-middleware",
+          });
+
+          return Promise.resolve({
+            ...params,
+            providerOptions: {
+              ...params.providerOptions,
+              octavioDebug: {
+                channel,
+                conversationId,
+                requestId,
+              },
+            },
+          });
+        },
+        wrapGenerate: async ({ doGenerate, params }) => {
+          const startMs = Date.now();
+          this.store.appendDebugEvent({
+            channel,
+            conversationId,
+            eventType: "llm.generate.start",
+            model: modelName,
+            payload: params,
+            requestId,
+            source: "llm-middleware",
+          });
+
+          try {
+            const result = await doGenerate();
+            this.store.appendDebugEvent({
+              channel,
+              conversationId,
+              eventType: "llm.generate.finish",
+              model: modelName,
+              payload: {
+                content: result.content,
+                durationMs: Date.now() - startMs,
+                finishReason: result.finishReason,
+                response: result.response,
+                usage: result.usage,
+                warnings: result.warnings,
+              },
+              requestId,
+              source: "llm-middleware",
+            });
+            return result;
+          } catch (error: unknown) {
+            this.store.appendDebugEvent({
+              channel,
+              conversationId,
+              eventType: "llm.generate.error",
+              model: modelName,
+              payload: {
+                durationMs: Date.now() - startMs,
+                error: toErrorPayload(error),
+              },
+              requestId,
+              source: "llm-middleware",
+            });
+            throw error;
+          }
+        },
+        wrapStream: async ({ doStream, params }) => {
+          const startMs = Date.now();
+          this.store.appendDebugEvent({
+            channel,
+            conversationId,
+            eventType: "llm.stream.start",
+            model: modelName,
+            payload: params,
+            requestId,
+            source: "llm-middleware",
+          });
+
+          try {
+            const { stream, ...rest } = await doStream();
+            const [clientStream, debugStream] = stream.tee();
+
+            void (async () => {
+              const reader = debugStream.getReader();
+              try {
+                while (true) {
+                  const { done, value } = await reader.read();
+                  if (done) {
+                    break;
+                  }
+
+                  const stepId = getChunkStepId(value);
+                  this.store.appendDebugEvent({
+                    channel,
+                    conversationId,
+                    eventType: "llm.stream.chunk",
+                    model: modelName,
+                    payload: value,
+                    requestId,
+                    source: "llm-middleware",
+                    stepId,
+                  });
+                }
+
+                this.store.appendDebugEvent({
+                  channel,
+                  conversationId,
+                  eventType: "llm.stream.finish",
+                  model: modelName,
+                  payload: {
+                    durationMs: Date.now() - startMs,
+                  },
+                  requestId,
+                  source: "llm-middleware",
+                });
+              } catch (error: unknown) {
+                this.store.appendDebugEvent({
+                  channel,
+                  conversationId,
+                  eventType: "llm.stream.error",
+                  model: modelName,
+                  payload: {
+                    durationMs: Date.now() - startMs,
+                    error: toErrorPayload(error),
+                  },
+                  requestId,
+                  source: "llm-middleware",
+                });
+              } finally {
+                reader.releaseLock();
+              }
+            })();
+
+            return {
+              ...rest,
+              stream: clientStream,
+            };
+          } catch (error: unknown) {
+            this.store.appendDebugEvent({
+              channel,
+              conversationId,
+              eventType: "llm.stream.error",
+              model: modelName,
+              payload: {
+                durationMs: Date.now() - startMs,
+                error: toErrorPayload(error),
+              },
+              requestId,
+              source: "llm-middleware",
+            });
+            throw error;
+          }
+        },
+      },
+      model: gateway(modelName),
+    });
+
+    this.store.appendDebugEvent({
+      channel,
+      conversationId,
+      eventType: "assistant.run.start",
+      model: modelName,
+      payload: {
+        messageLength: trimmedMessage.length,
+      },
+      requestId,
+      source: "assistant-runner",
+    });
+
     const result = streamText({
       messages: modelMessages,
-      model: this.openai(input.model ?? this.defaultModel),
-      onFinish: ({ text }) => {
+      model: wrappedModel,
+      onError: ({ error }) => {
+        this.store.appendDebugEvent({
+          channel,
+          conversationId,
+          eventType: "assistant.run.error",
+          model: modelName,
+          payload: {
+            error: toErrorPayload(error),
+          },
+          requestId,
+          source: "assistant-runner",
+        });
+      },
+      onFinish: ({
+        finishReason,
+        steps,
+        text,
+        totalUsage,
+        usage,
+        warnings,
+      }) => {
         this.store.saveMessage({
           channel,
           conversationId,
@@ -110,6 +325,41 @@ export class AssistantRunner {
           role: "assistant",
           text,
         });
+
+        this.store.appendDebugEvent({
+          channel,
+          conversationId,
+          eventType: "assistant.run.finish",
+          model: modelName,
+          payload: {
+            finishReason,
+            stepCount: steps.length,
+            totalUsage,
+            usage,
+            warnings,
+          },
+          requestId,
+          source: "assistant-runner",
+        });
+      },
+      onStepFinish: (event) => {
+        this.store.appendDebugEvent({
+          channel,
+          conversationId,
+          eventType: "assistant.step.finish",
+          model: modelName,
+          payload: event,
+          requestId,
+          source: "assistant-runner",
+          stepId: event.response?.id,
+        });
+      },
+      providerOptions: {
+        octavioDebug: {
+          channel,
+          conversationId,
+          requestId,
+        },
       },
       stopWhen: stepCountIs(6),
       system:

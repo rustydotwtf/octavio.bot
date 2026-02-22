@@ -17,8 +17,41 @@ interface TableInfoRow {
   name: string;
 }
 
+interface TotalBytesRow {
+  totalBytes: number;
+}
+
+interface DebugEventRow {
+  channel: string;
+  conversationId: string | null;
+  createdAt: string;
+  eventType: string;
+  id: string;
+  model: string | null;
+  payloadBytes: number;
+  payloadJson: string;
+  requestId: string | null;
+  source: string;
+  stepId: string | null;
+}
+
 const nowIso = (): string => new Date().toISOString();
 const ACTIVE_CONVERSATION_ID_KEY = "active_conversation_id";
+const DEFAULT_DEBUG_LOG_MAX_BYTES = 64 * 1024 * 1024;
+const textEncoder = new TextEncoder();
+
+const parseDebugLogMaxBytes = (value: string | undefined): number => {
+  if (!value || value.trim().length === 0) {
+    return DEFAULT_DEBUG_LOG_MAX_BYTES;
+  }
+
+  const parsedMegabytes = Number.parseInt(value, 10);
+  if (Number.isNaN(parsedMegabytes) || parsedMegabytes < 0) {
+    return DEFAULT_DEBUG_LOG_MAX_BYTES;
+  }
+
+  return parsedMegabytes * 1024 * 1024;
+};
 
 const getDirectoryPath = (filePath: string): string => {
   const separatorIndex = Math.max(
@@ -57,10 +90,14 @@ const ensureDatabaseDirectory = (dbPath: string): void => {
 
 export class ChatStore {
   private readonly db: Database;
+  private readonly debugLogMaxBytes: number;
 
   public constructor(dbPath: string) {
     ensureDatabaseDirectory(dbPath);
     this.db = new Database(dbPath, { create: true, strict: true });
+    this.debugLogMaxBytes = parseDebugLogMaxBytes(
+      process.env.ASSISTANT_DEBUG_LOG_MB
+    );
     this.db.run("PRAGMA journal_mode = WAL;");
     this.db.run("PRAGMA foreign_keys = ON;");
     this.setup();
@@ -229,6 +266,64 @@ export class ChatStore {
       });
   }
 
+  public appendDebugEvent(input: {
+    channel?: string;
+    conversationId?: string;
+    eventType: string;
+    model?: string;
+    payload: unknown;
+    requestId?: string;
+    source: string;
+    stepId?: string;
+  }): void {
+    if (this.debugLogMaxBytes <= 0) {
+      return;
+    }
+
+    const payloadJson = ChatStore.toJson(input.payload);
+    const payloadBytes = textEncoder.encode(payloadJson).length;
+
+    this.db
+      .query(
+        "INSERT INTO debug_events (id, conversation_id, channel, source, event_type, request_id, step_id, model, payload_json, payload_bytes, created_at) VALUES ($id, $conversationId, $channel, $source, $eventType, $requestId, $stepId, $model, $payloadJson, $payloadBytes, $createdAt)"
+      )
+      .run({
+        channel: input.channel ?? "api",
+        conversationId: input.conversationId ?? null,
+        createdAt: nowIso(),
+        eventType: input.eventType,
+        id: crypto.randomUUID(),
+        model: input.model ?? null,
+        payloadBytes,
+        payloadJson,
+        requestId: input.requestId ?? null,
+        source: input.source,
+        stepId: input.stepId ?? null,
+      });
+
+    this.pruneDebugEventsToLimit();
+  }
+
+  public getDebugEventsTotalBytes(): number {
+    const row = this.db
+      .query<TotalBytesRow, Record<string, never>>(
+        "SELECT COALESCE(SUM(payload_bytes), 0) as totalBytes FROM debug_events"
+      )
+      .get({});
+
+    return row?.totalBytes ?? 0;
+  }
+
+  public listDebugEvents(limit = 100): DebugEventRow[] {
+    const boundedLimit = Math.max(1, Math.min(limit, 1000));
+
+    return this.db
+      .query<DebugEventRow, { limit: number }>(
+        "SELECT id, conversation_id as conversationId, channel, source, event_type as eventType, request_id as requestId, step_id as stepId, model, payload_json as payloadJson, payload_bytes as payloadBytes, created_at as createdAt FROM debug_events ORDER BY created_at DESC LIMIT $limit"
+      )
+      .all({ limit: boundedLimit });
+  }
+
   private setup(): void {
     this.db.run(
       "CREATE TABLE IF NOT EXISTS conversations (id TEXT PRIMARY KEY, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)"
@@ -247,6 +342,18 @@ export class ChatStore {
     );
     this.db.run(
       "CREATE INDEX IF NOT EXISTS idx_tool_calls_conversation_created ON tool_calls(conversation_id, created_at)"
+    );
+    this.db.run(
+      "CREATE TABLE IF NOT EXISTS debug_events (id TEXT PRIMARY KEY, conversation_id TEXT, channel TEXT NOT NULL DEFAULT 'api', source TEXT NOT NULL, event_type TEXT NOT NULL, request_id TEXT, step_id TEXT, model TEXT, payload_json TEXT NOT NULL, payload_bytes INTEGER NOT NULL, created_at TEXT NOT NULL, FOREIGN KEY(conversation_id) REFERENCES conversations(id) ON DELETE CASCADE)"
+    );
+    this.db.run(
+      "CREATE INDEX IF NOT EXISTS idx_debug_events_created ON debug_events(created_at)"
+    );
+    this.db.run(
+      "CREATE INDEX IF NOT EXISTS idx_debug_events_conversation_created ON debug_events(conversation_id, created_at)"
+    );
+    this.db.run(
+      "CREATE INDEX IF NOT EXISTS idx_debug_events_request_created ON debug_events(request_id, created_at)"
     );
 
     this.ensureColumnExists(
@@ -269,6 +376,80 @@ export class ChatStore {
       "channel",
       "ALTER TABLE tool_calls ADD COLUMN channel TEXT NOT NULL DEFAULT 'api'"
     );
+    this.ensureColumnExists(
+      "debug_events",
+      "channel",
+      "ALTER TABLE debug_events ADD COLUMN channel TEXT NOT NULL DEFAULT 'api'"
+    );
+    this.ensureColumnExists(
+      "debug_events",
+      "source",
+      "ALTER TABLE debug_events ADD COLUMN source TEXT NOT NULL DEFAULT 'runtime'"
+    );
+    this.ensureColumnExists(
+      "debug_events",
+      "event_type",
+      "ALTER TABLE debug_events ADD COLUMN event_type TEXT NOT NULL DEFAULT 'unknown'"
+    );
+    this.ensureColumnExists(
+      "debug_events",
+      "request_id",
+      "ALTER TABLE debug_events ADD COLUMN request_id TEXT"
+    );
+    this.ensureColumnExists(
+      "debug_events",
+      "step_id",
+      "ALTER TABLE debug_events ADD COLUMN step_id TEXT"
+    );
+    this.ensureColumnExists(
+      "debug_events",
+      "model",
+      "ALTER TABLE debug_events ADD COLUMN model TEXT"
+    );
+    this.ensureColumnExists(
+      "debug_events",
+      "payload_json",
+      "ALTER TABLE debug_events ADD COLUMN payload_json TEXT NOT NULL DEFAULT '{}'"
+    );
+    this.ensureColumnExists(
+      "debug_events",
+      "payload_bytes",
+      "ALTER TABLE debug_events ADD COLUMN payload_bytes INTEGER NOT NULL DEFAULT 2"
+    );
+    this.ensureColumnExists(
+      "debug_events",
+      "created_at",
+      "ALTER TABLE debug_events ADD COLUMN created_at TEXT NOT NULL DEFAULT '1970-01-01T00:00:00.000Z'"
+    );
+  }
+
+  private pruneDebugEventsToLimit(): void {
+    let totalBytes = this.getDebugEventsTotalBytes();
+
+    while (totalBytes > this.debugLogMaxBytes) {
+      const oldest = this.db
+        .query<{ id: string; payloadBytes: number }, Record<string, never>>(
+          "SELECT id, payload_bytes as payloadBytes FROM debug_events ORDER BY created_at ASC, id ASC LIMIT 1"
+        )
+        .get({});
+
+      if (!oldest) {
+        return;
+      }
+
+      this.db
+        .query("DELETE FROM debug_events WHERE id = $id")
+        .run({ id: oldest.id });
+      totalBytes -= oldest.payloadBytes;
+    }
+  }
+
+  private static toJson(value: unknown): string {
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return JSON.stringify({ error: "Unable to serialize value" });
+    }
   }
 
   private ensureColumnExists(

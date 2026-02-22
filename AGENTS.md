@@ -226,8 +226,8 @@ Task orchestration notes:
 ### Runtime Expectations
 
 - `.env` should include `GITHUB_TOKEN`, OpenCode connection settings (`OPENCODE_HOSTNAME`, `OPENCODE_PORT`), and `OPENCODE_API_KEY` for OpenCode Zen; `OPENCODE_MODEL` is optional
-- Assistant API local env should include `AI_GATEWAY_API_KEY`; optional overrides are `AI_GATEWAY_BASE_URL`, `ASSISTANT_MODEL`, `ASSISTANT_DB_PATH` (defaults to `~/.octavio/assistant.sqlite`), and `PORT`
-- Telegram adapter env should include `TELEGRAM_BOT_TOKEN` and `AI_GATEWAY_API_KEY`; optional overrides are `AI_GATEWAY_BASE_URL`, `TELEGRAM_MODE`, `TELEGRAM_ALLOWED_CHAT_IDS`, `TELEGRAM_WEBHOOK_URL`, `TELEGRAM_WEBHOOK_SECRET`, `TELEGRAM_SET_WEBHOOK`, `TELEGRAM_POLL_TIMEOUT_SECONDS`, `TELEGRAM_POLL_IDLE_DELAY_MS`, `ASSISTANT_MODEL`, `ASSISTANT_DB_PATH` (defaults to `~/.octavio/assistant.sqlite`), and `PORT`
+- Assistant API local env should include `AI_GATEWAY_API_KEY`; optional overrides are `ASSISTANT_MODEL`, `ASSISTANT_DB_PATH` (defaults to `~/.octavio/assistant.sqlite`), `ASSISTANT_DEBUG_LOG_MB` (defaults to `64`, set `0` to disable debug-event persistence), and `PORT`
+- Telegram adapter env should include `TELEGRAM_BOT_TOKEN` and `AI_GATEWAY_API_KEY`; optional overrides are `TELEGRAM_MODE`, `TELEGRAM_ALLOWED_CHAT_IDS`, `TELEGRAM_WEBHOOK_URL`, `TELEGRAM_WEBHOOK_SECRET`, `TELEGRAM_SET_WEBHOOK`, `TELEGRAM_POLL_TIMEOUT_SECONDS`, `TELEGRAM_POLL_IDLE_DELAY_MS`, `ASSISTANT_MODEL`, `ASSISTANT_DB_PATH` (defaults to `~/.octavio/assistant.sqlite`), `ASSISTANT_DEBUG_LOG_MB` (defaults to `64`, set `0` to disable debug-event persistence), and `PORT`
 - CLI requires `opencode` binary: local mode is detect-only; CI mode auto-installs when missing; `--install-opencode` forces local auto-install
 - Default artifact execution is `agent` (OpenCode can write artifacts in-workspace); `external_directory` remains denied
 - Keep OpenCode prompts constrained to the provided workspace directory

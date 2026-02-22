@@ -70,6 +70,7 @@ Useful workflow commands:
 
 - Copy `.env.example` to `.env` for local setup.
 - Assistant services use Vercel AI Gateway via `AI_GATEWAY_API_KEY`.
+- Assistant services can persist bounded debug telemetry in SQLite via `ASSISTANT_DEBUG_LOG_MB` (default `64`, set `0` to disable).
 
 ## CI
 
