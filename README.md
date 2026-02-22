@@ -11,7 +11,7 @@ Current app:
 
 - `apps/review-bot-cli` - publishable PR review CLI package (`@octavio.bot/review`)
 - `apps/site` - static product site for `octavio.bot`
-- `apps/assistant-api` - local Elysia chat assistant API with SQLite history
+- `apps/assistant-api` - local Elysia chat assistant API with SQLite history and a durable single active conversation
 
 Current shared packages:
 

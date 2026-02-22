@@ -8,7 +8,13 @@ interface ConversationRow {
   updatedAt: string;
 }
 
+interface AppStateRow {
+  key: string;
+  value: string;
+}
+
 const nowIso = (): string => new Date().toISOString();
+const ACTIVE_CONVERSATION_ID_KEY = "active_conversation_id";
 
 export class ChatStore {
   private readonly db: Database;
@@ -33,6 +39,50 @@ export class ChatStore {
       });
 
     return id;
+  }
+
+  public getActiveConversationId(): string | undefined {
+    const row = this.db
+      .query<AppStateRow, { key: string }>(
+        "SELECT key, value FROM app_state WHERE key = $key LIMIT 1"
+      )
+      .get({ key: ACTIVE_CONVERSATION_ID_KEY });
+
+    return row?.value;
+  }
+
+  public setActiveConversationId(id: string): string {
+    this.db
+      .query(
+        "INSERT INTO app_state (key, value) VALUES ($key, $value) ON CONFLICT(key) DO UPDATE SET value = excluded.value"
+      )
+      .run({
+        key: ACTIVE_CONVERSATION_ID_KEY,
+        value: id,
+      });
+
+    return id;
+  }
+
+  public startNewConversation(): string {
+    const id = crypto.randomUUID();
+    this.createConversation(id);
+    this.setActiveConversationId(id);
+    return id;
+  }
+
+  public resolveActiveConversationId(): string {
+    const existingActiveConversationId = this.getActiveConversationId();
+
+    if (
+      existingActiveConversationId &&
+      existingActiveConversationId.length > 0
+    ) {
+      this.ensureConversation(existingActiveConversationId);
+      return existingActiveConversationId;
+    }
+
+    return this.startNewConversation();
   }
 
   public ensureConversation(id: string): string {
@@ -125,6 +175,9 @@ export class ChatStore {
   private setup(): void {
     this.db.run(
       "CREATE TABLE IF NOT EXISTS conversations (id TEXT PRIMARY KEY, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)"
+    );
+    this.db.run(
+      "CREATE TABLE IF NOT EXISTS app_state (key TEXT PRIMARY KEY, value TEXT NOT NULL)"
     );
     this.db.run(
       "CREATE TABLE IF NOT EXISTS messages (id TEXT PRIMARY KEY, conversation_id TEXT NOT NULL, role TEXT NOT NULL, content_json TEXT NOT NULL, created_at TEXT NOT NULL, FOREIGN KEY(conversation_id) REFERENCES conversations(id) ON DELETE CASCADE)"

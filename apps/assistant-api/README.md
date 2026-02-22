@@ -1,6 +1,8 @@
 # assistant-api
 
 Local Elysia chat assistant API that uses Vercel AI SDK with SQLite persistence.
+The server keeps exactly one active conversation at a time, and the active
+conversation pointer is stored in SQLite for durability across restarts.
 
 ## Run
 
@@ -28,7 +30,15 @@ Default server URL: `http://localhost:4100`
 }
 ```
 
-Response streams assistant text and includes `x-conversation-id` header.
+Behavior:
+
+- Send `{"message":"/new"}` to start a new active conversation.
+- `/new` returns plain text: `Started a new conversation.`
+- `/new` includes the new conversation id in `x-conversation-id`.
+- For normal messages, the server always uses the current active conversation.
+- `conversationId` is accepted for compatibility but ignored in this mode.
+
+Responses include `x-conversation-id`.
 
 ## Environment
 

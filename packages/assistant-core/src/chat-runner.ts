@@ -40,17 +40,29 @@ export class AssistantRunner {
     conversationId: string;
     response: Response;
   } {
-    const conversationId =
-      input.conversationId && input.conversationId.trim().length > 0
-        ? input.conversationId
-        : crypto.randomUUID();
+    const trimmedMessage = input.message.trim();
+
+    if (trimmedMessage === "/new") {
+      const conversationId = this.store.startNewConversation();
+      const response = new Response("Started a new conversation.", {
+        status: 200,
+      });
+      response.headers.set("x-conversation-id", conversationId);
+
+      return {
+        conversationId,
+        response,
+      };
+    }
+
+    const conversationId = this.store.resolveActiveConversationId();
 
     this.store.ensureConversation(conversationId);
     this.store.saveMessage({
       conversationId,
       id: crypto.randomUUID(),
       role: "user",
-      text: input.message,
+      text: trimmedMessage,
     });
 
     const storedMessages = this.store.listMessages(conversationId);
