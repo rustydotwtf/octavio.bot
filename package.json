@@ -11,6 +11,8 @@
     "ci": "bun run check && bun run build && bun run test",
     "dev": "bun run site:dev",
     "assistant:dev": "bun run --cwd apps/assistant-api dev",
+    "assistant:telegram:dev": "bun run --cwd apps/assistant-telegram dev",
+    "assistant:dev:all": "bun run --parallel assistant:dev assistant:telegram:dev",
     "review-bot": "bun run apps/review-bot-cli/src/index.ts",
     "review-cli:build": "bun run --cwd apps/review-bot-cli build",
     "site:dev": "bun run --cwd apps/site watch:prompts & bun run --cwd apps/site dev",

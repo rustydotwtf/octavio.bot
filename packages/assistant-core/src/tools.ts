@@ -6,6 +6,8 @@ import { runPatchFileTool } from "./patch-file";
 import { runReadFileTool } from "./read-file";
 
 interface BuildToolsInput {
+  channel: string;
+  channelMetadata?: Record<string, unknown>;
   conversationId: string;
   store: ChatStore;
   workspaceDirectory: string;
@@ -20,6 +22,8 @@ const toJson = (value: unknown): string => {
 };
 
 export const buildAssistantTools = ({
+  channel,
+  channelMetadata,
   conversationId,
   store,
   workspaceDirectory,
@@ -28,8 +32,10 @@ export const buildAssistantTools = ({
     description: "Find and replace text in a file.",
     execute: async (input) => {
       const callId = store.startToolCall({
+        channel,
         conversationId,
         inputJson: toJson(input),
+        metadataJson: channelMetadata ? toJson(channelMetadata) : undefined,
         toolName: "patch_file",
       });
 
@@ -63,8 +69,10 @@ export const buildAssistantTools = ({
     description: "Read a file and return its content.",
     execute: async (input) => {
       const callId = store.startToolCall({
+        channel,
         conversationId,
         inputJson: toJson(input),
+        metadataJson: channelMetadata ? toJson(channelMetadata) : undefined,
         toolName: "read_file",
       });
 

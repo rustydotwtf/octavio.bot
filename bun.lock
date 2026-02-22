@@ -28,6 +28,13 @@
         "zod": "^4.1.12",
       },
     },
+    "apps/assistant-telegram": {
+      "name": "assistant-telegram",
+      "dependencies": {
+        "@octavio.bot/assistant-core": "workspace:*",
+        "elysia": "^1.4.9",
+      },
+    },
     "apps/review-bot-cli": {
       "name": "@octavio.bot/review",
       "version": "0.1.4",
@@ -327,6 +334,8 @@
     "ai": ["ai@5.0.137", "", { "dependencies": { "@ai-sdk/gateway": "2.0.43", "@ai-sdk/provider": "2.0.1", "@ai-sdk/provider-utils": "3.0.21", "@opentelemetry/api": "1.9.0" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-ZPqvIG5HlTEaTsf91p5CvOMWYoTxsGpHckgc8qk7FNVM9O375A1A5cvLq6CpkCdTWrdyNZMMs3brnfUIlJP20g=="],
 
     "assistant-api": ["assistant-api@workspace:apps/assistant-api"],
+
+    "assistant-telegram": ["assistant-telegram@workspace:apps/assistant-telegram"],
 
     "balanced-match": ["balanced-match@4.0.3", "", {}, "sha512-1pHv8LX9CpKut1Zp4EXey7Z8OfH11ONNH6Dhi2WDUt31VVZFXZzKwXcysBgqSumFCmR+0dqjMK5v5JiFHzi0+g=="],
 

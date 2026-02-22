@@ -12,6 +12,7 @@ Current app:
 - `apps/review-bot-cli` - publishable PR review CLI package (`@octavio.bot/review`)
 - `apps/site` - static product site for `octavio.bot`
 - `apps/assistant-api` - local Elysia chat assistant API with SQLite history and a durable single active conversation
+- `apps/assistant-telegram` - Telegram adapter for the assistant runtime (polling + webhook)
 
 Current shared packages:
 
@@ -35,6 +36,7 @@ App-specific setup, usage, and behavior live with each app.
 - Review CLI docs: `apps/review-bot-cli/README.md`
 - Site docs: `apps/site/README.md`
 - Assistant API docs: `apps/assistant-api/README.md`
+- Assistant Telegram docs: `apps/assistant-telegram/README.md`
 
 ## Development Commands
 
@@ -53,6 +55,8 @@ Useful workflow commands:
 
 - Run default root dev workflow (currently site): `bun run dev`
 - Run local assistant API: `bun run assistant:dev`
+- Run local Telegram assistant adapter: `bun run assistant:telegram:dev`
+- Run assistant API + Telegram together: `bun run assistant:dev:all`
 - Local review CLI source run: `bun run review-bot ...`
 - Build publishable review CLI: `bun run review-cli:build`
 - Run site locally with prompt sync watch: `bun run site:dev`
@@ -61,6 +65,11 @@ Useful workflow commands:
 - Build site: `bun run --cwd apps/site build`
 - Deploy site (Vercel): `bun run --cwd apps/site deploy`
 - Initialize Octavio files in any repo: `bunx --bun @octavio.bot/review@latest init --workdir .`
+
+## Environment
+
+- Copy `.env.example` to `.env` for local setup.
+- Assistant services use Vercel AI Gateway via `AI_GATEWAY_API_KEY`.
 
 ## CI
 

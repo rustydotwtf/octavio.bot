@@ -20,7 +20,9 @@ Run from repository root:
 - Uses Elysia for HTTP routing.
 - Uses Vercel AI SDK through `@octavio.bot/assistant-core`.
 - Persists chat history, tool calls, and the active conversation pointer in SQLite.
-- Assumes one active conversation at a time; `POST /chat` with `"/new"` rotates it.
+- Shares one active conversation with other interfaces (for example Telegram) when
+  they use the same `ASSISTANT_DB_PATH`.
+- `POST /chat` with `"/new"` rotates the shared active conversation.
 
 ## Documentation Sync
 

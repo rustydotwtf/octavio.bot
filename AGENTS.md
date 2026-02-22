@@ -179,6 +179,7 @@ This repository now uses a Bun workspace monorepo:
 - `apps/review-bot-cli` - publishable CLI package (`@octavio.bot/review`, binary `octavio-review`)
 - `apps/site` - static product site for `octavio.bot` (idcmd-based)
 - `apps/assistant-api` - local-first Elysia chat assistant API (Vercel AI SDK + SQLite)
+- `apps/assistant-telegram` - Telegram adapter for the assistant runtime (polling + webhook)
 - `packages/config` - runtime env and CLI config parsing
 - `packages/opencode-runner` - OpenCode SDK wrapper for artifact-schema generation and validation retries
 - `packages/github-review` - GitHub REST helpers for PR metadata and changed files
@@ -196,6 +197,8 @@ Notes:
 
 - Run default root dev workflow (currently site): `bun run dev`
 - Run local assistant API: `bun run assistant:dev`
+- Run local Telegram assistant adapter: `bun run assistant:telegram:dev`
+- Run assistant API + Telegram together: `bun run assistant:dev:all`
 - Run local source bot: `bun run review-bot --owner <owner> --repo <repo> --pr <number> [--instructions /absolute/or/workspace/path.md] [--instructions-profile <name>] [--artifact-execution agent|host] [--install-opencode] --workdir .`
 - Run site dev with prompt sync watch from root: `bun run site:dev`
 - Watch site prompt sync only from root: `bun run site:sync:watch`
@@ -223,7 +226,8 @@ Task orchestration notes:
 ### Runtime Expectations
 
 - `.env` should include `GITHUB_TOKEN`, OpenCode connection settings (`OPENCODE_HOSTNAME`, `OPENCODE_PORT`), and `OPENCODE_API_KEY` for OpenCode Zen; `OPENCODE_MODEL` is optional
-- Assistant API local env should include `OPENAI_API_KEY`; optional overrides are `ASSISTANT_MODEL`, `ASSISTANT_DB_PATH`, and `PORT`
+- Assistant API local env should include `AI_GATEWAY_API_KEY`; optional overrides are `AI_GATEWAY_BASE_URL`, `ASSISTANT_MODEL`, `ASSISTANT_DB_PATH`, and `PORT`
+- Telegram adapter env should include `TELEGRAM_BOT_TOKEN` and `AI_GATEWAY_API_KEY`; optional overrides are `AI_GATEWAY_BASE_URL`, `TELEGRAM_MODE`, `TELEGRAM_ALLOWED_CHAT_IDS`, `TELEGRAM_WEBHOOK_URL`, `TELEGRAM_WEBHOOK_SECRET`, `TELEGRAM_SET_WEBHOOK`, `TELEGRAM_POLL_TIMEOUT_SECONDS`, `TELEGRAM_POLL_IDLE_DELAY_MS`, `ASSISTANT_MODEL`, `ASSISTANT_DB_PATH`, and `PORT`
 - CLI requires `opencode` binary: local mode is detect-only; CI mode auto-installs when missing; `--install-opencode` forces local auto-install
 - Default artifact execution is `agent` (OpenCode can write artifacts in-workspace); `external_directory` remains denied
 - Keep OpenCode prompts constrained to the provided workspace directory

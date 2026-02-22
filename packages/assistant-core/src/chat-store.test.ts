@@ -51,6 +51,25 @@ describe("chat store active conversation", () => {
     expect(secondConversationId).not.toBe(firstConversationId);
     expect(store.getActiveConversationId()).toBe(secondConversationId);
   });
+
+  it("stores channel metadata on saved messages", () => {
+    const dbPath = createDbPath();
+    const store = new ChatStore(dbPath);
+    const conversationId = store.resolveActiveConversationId();
+
+    store.saveMessage({
+      channel: "telegram",
+      conversationId,
+      id: crypto.randomUUID(),
+      metadataJson: JSON.stringify({ chatId: "123" }),
+      role: "user",
+      text: "hello",
+    });
+
+    const [message] = store.listMessages(conversationId);
+    expect(message?.channel).toBe("telegram");
+    expect(message?.metadataJson).toBe('{"chatId":"123"}');
+  });
 });
 
 describe("assistant runner /new command", () => {
@@ -58,7 +77,7 @@ describe("assistant runner /new command", () => {
     const dbPath = createDbPath();
     const store = new ChatStore(dbPath);
     const runner = new AssistantRunner({
-      defaultModel: "gpt-4o-mini",
+      defaultModel: "openai/gpt-5-mini",
       store,
       workspaceDirectory: process.cwd(),
     });

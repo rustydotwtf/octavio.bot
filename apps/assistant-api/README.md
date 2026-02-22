@@ -3,6 +3,8 @@
 Local Elysia chat assistant API that uses Vercel AI SDK with SQLite persistence.
 The server keeps exactly one active conversation at a time, and the active
 conversation pointer is stored in SQLite for durability across restarts.
+When another interface (for example Telegram) uses the same SQLite file, both
+interfaces share the same active conversation.
 
 ## Run
 
@@ -25,7 +27,10 @@ Default server URL: `http://localhost:4100`
 ```json
 {
   "conversationId": "optional-existing-id",
+  "channel": "optional-source-channel",
+  "channelMetadata": { "optional": "metadata" },
   "message": "read README.md",
+  "messageMetadata": { "optional": "metadata" },
   "model": "optional-model-name"
 }
 ```
@@ -37,13 +42,17 @@ Behavior:
 - `/new` includes the new conversation id in `x-conversation-id`.
 - For normal messages, the server always uses the current active conversation.
 - `conversationId` is accepted for compatibility but ignored in this mode.
+- `channel` defaults to `api`.
+- `channelMetadata` and `messageMetadata` are stored for interface-specific
+  rendering/debugging and do not change LLM context formatting.
 
 Responses include `x-conversation-id`.
 
 ## Environment
 
-- `OPENAI_API_KEY` (required)
-- `ASSISTANT_MODEL` (optional, default `gpt-4o-mini`)
+- `AI_GATEWAY_API_KEY` (required)
+- `AI_GATEWAY_BASE_URL` (optional, default `https://ai-gateway.vercel.sh/v1`)
+- `ASSISTANT_MODEL` (optional, default `openai/gpt-5-mini`)
 - `ASSISTANT_DB_PATH` (optional, default `.octavio/assistant.sqlite`)
 - `PORT` (optional, default `4100`)
 

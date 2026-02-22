@@ -1,8 +1,11 @@
 import { z } from "zod";
 
 export const chatRequestInput = z.object({
+  channel: z.string().min(1).optional(),
+  channelMetadata: z.record(z.string(), z.unknown()).optional(),
   conversationId: z.string().min(1).optional(),
   message: z.string().min(1),
+  messageMetadata: z.record(z.string(), z.unknown()).optional(),
   model: z.string().min(1).optional(),
 });
 
@@ -29,9 +32,11 @@ export const messageRole = z.enum(["user", "assistant", "system"]);
 export type MessageRole = z.infer<typeof messageRole>;
 
 export interface ChatMessageRow {
+  channel: string;
   contentJson: string;
   conversationId: string;
   createdAt: string;
   id: string;
+  metadataJson: string | null;
   role: MessageRole;
 }

@@ -53,7 +53,10 @@ const app = new Elysia()
       };
     }
 
-    const run = runner.run(parsed.data);
+    const run = runner.run({
+      ...parsed.data,
+      channel: parsed.data.channel ?? "api",
+    });
     return run.response;
   });
 

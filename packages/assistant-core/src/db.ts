@@ -13,6 +13,10 @@ interface AppStateRow {
   value: string;
 }
 
+interface TableInfoRow {
+  name: string;
+}
+
 const nowIso = (): string => new Date().toISOString();
 const ACTIVE_CONVERSATION_ID_KEY = "active_conversation_id";
 
@@ -42,26 +46,35 @@ export class ChatStore {
   }
 
   public getActiveConversationId(): string | undefined {
+    return this.getAppStateValue(ACTIVE_CONVERSATION_ID_KEY);
+  }
+
+  public getAppStateValue(key: string): string | undefined {
     const row = this.db
       .query<AppStateRow, { key: string }>(
         "SELECT key, value FROM app_state WHERE key = $key LIMIT 1"
       )
-      .get({ key: ACTIVE_CONVERSATION_ID_KEY });
+      .get({ key });
 
     return row?.value;
   }
 
   public setActiveConversationId(id: string): string {
+    this.setAppStateValue(ACTIVE_CONVERSATION_ID_KEY, id);
+    return id;
+  }
+
+  public setAppStateValue(key: string, value: string): string {
     this.db
       .query(
         "INSERT INTO app_state (key, value) VALUES ($key, $value) ON CONFLICT(key) DO UPDATE SET value = excluded.value"
       )
       .run({
-        key: ACTIVE_CONVERSATION_ID_KEY,
-        value: id,
+        key,
+        value,
       });
 
-    return id;
+    return value;
   }
 
   public startNewConversation(): string {
@@ -100,21 +113,25 @@ export class ChatStore {
   }
 
   public saveMessage(input: {
+    channel?: string;
     conversationId: string;
     id: string;
+    metadataJson?: string;
     role: MessageRole;
     text: string;
   }): void {
     const timestamp = nowIso();
     this.db
       .query(
-        "INSERT INTO messages (id, conversation_id, role, content_json, created_at) VALUES ($id, $conversationId, $role, $contentJson, $createdAt)"
+        "INSERT INTO messages (id, conversation_id, role, content_json, channel, metadata_json, created_at) VALUES ($id, $conversationId, $role, $contentJson, $channel, $metadataJson, $createdAt)"
       )
       .run({
+        channel: input.channel ?? "api",
         contentJson: JSON.stringify({ text: input.text }),
         conversationId: input.conversationId,
         createdAt: timestamp,
         id: input.id,
+        metadataJson: input.metadataJson ?? null,
         role: input.role,
       });
 
@@ -129,26 +146,30 @@ export class ChatStore {
   public listMessages(conversationId: string): ChatMessageRow[] {
     return this.db
       .query<ChatMessageRow, { conversationId: string }>(
-        "SELECT id, conversation_id as conversationId, role, content_json as contentJson, created_at as createdAt FROM messages WHERE conversation_id = $conversationId ORDER BY created_at ASC"
+        "SELECT id, conversation_id as conversationId, role, content_json as contentJson, channel, metadata_json as metadataJson, created_at as createdAt FROM messages WHERE conversation_id = $conversationId ORDER BY created_at ASC"
       )
       .all({ conversationId });
   }
 
   public startToolCall(input: {
+    channel?: string;
     conversationId: string;
     inputJson: string;
+    metadataJson?: string;
     toolName: string;
   }): string {
     const id = crypto.randomUUID();
     this.db
       .query(
-        "INSERT INTO tool_calls (id, conversation_id, tool_name, input_json, status, created_at) VALUES ($id, $conversationId, $toolName, $inputJson, $status, $createdAt)"
+        "INSERT INTO tool_calls (id, conversation_id, tool_name, input_json, metadata_json, channel, status, created_at) VALUES ($id, $conversationId, $toolName, $inputJson, $metadataJson, $channel, $status, $createdAt)"
       )
       .run({
+        channel: input.channel ?? "api",
         conversationId: input.conversationId,
         createdAt: nowIso(),
         id,
         inputJson: input.inputJson,
+        metadataJson: input.metadataJson ?? null,
         status: "started",
         toolName: input.toolName,
       });
@@ -180,10 +201,10 @@ export class ChatStore {
       "CREATE TABLE IF NOT EXISTS app_state (key TEXT PRIMARY KEY, value TEXT NOT NULL)"
     );
     this.db.run(
-      "CREATE TABLE IF NOT EXISTS messages (id TEXT PRIMARY KEY, conversation_id TEXT NOT NULL, role TEXT NOT NULL, content_json TEXT NOT NULL, created_at TEXT NOT NULL, FOREIGN KEY(conversation_id) REFERENCES conversations(id) ON DELETE CASCADE)"
+      "CREATE TABLE IF NOT EXISTS messages (id TEXT PRIMARY KEY, conversation_id TEXT NOT NULL, role TEXT NOT NULL, content_json TEXT NOT NULL, channel TEXT NOT NULL DEFAULT 'api', metadata_json TEXT, created_at TEXT NOT NULL, FOREIGN KEY(conversation_id) REFERENCES conversations(id) ON DELETE CASCADE)"
     );
     this.db.run(
-      "CREATE TABLE IF NOT EXISTS tool_calls (id TEXT PRIMARY KEY, conversation_id TEXT NOT NULL, tool_name TEXT NOT NULL, input_json TEXT NOT NULL, output_json TEXT, status TEXT NOT NULL, created_at TEXT NOT NULL, FOREIGN KEY(conversation_id) REFERENCES conversations(id) ON DELETE CASCADE)"
+      "CREATE TABLE IF NOT EXISTS tool_calls (id TEXT PRIMARY KEY, conversation_id TEXT NOT NULL, tool_name TEXT NOT NULL, input_json TEXT NOT NULL, output_json TEXT, metadata_json TEXT, channel TEXT NOT NULL DEFAULT 'api', status TEXT NOT NULL, created_at TEXT NOT NULL, FOREIGN KEY(conversation_id) REFERENCES conversations(id) ON DELETE CASCADE)"
     );
     this.db.run(
       "CREATE INDEX IF NOT EXISTS idx_messages_conversation_created ON messages(conversation_id, created_at)"
@@ -191,5 +212,44 @@ export class ChatStore {
     this.db.run(
       "CREATE INDEX IF NOT EXISTS idx_tool_calls_conversation_created ON tool_calls(conversation_id, created_at)"
     );
+
+    this.ensureColumnExists(
+      "messages",
+      "channel",
+      "ALTER TABLE messages ADD COLUMN channel TEXT NOT NULL DEFAULT 'api'"
+    );
+    this.ensureColumnExists(
+      "messages",
+      "metadata_json",
+      "ALTER TABLE messages ADD COLUMN metadata_json TEXT"
+    );
+    this.ensureColumnExists(
+      "tool_calls",
+      "metadata_json",
+      "ALTER TABLE tool_calls ADD COLUMN metadata_json TEXT"
+    );
+    this.ensureColumnExists(
+      "tool_calls",
+      "channel",
+      "ALTER TABLE tool_calls ADD COLUMN channel TEXT NOT NULL DEFAULT 'api'"
+    );
+  }
+
+  private ensureColumnExists(
+    tableName: string,
+    columnName: string,
+    alterStatement: string
+  ): void {
+    const columns = this.db
+      .query<TableInfoRow, Record<string, never>>(
+        `PRAGMA table_info(${tableName})`
+      )
+      .all({});
+    const hasColumn = columns.some((column) => column.name === columnName);
+    if (hasColumn) {
+      return;
+    }
+
+    this.db.run(alterStatement);
   }
 }

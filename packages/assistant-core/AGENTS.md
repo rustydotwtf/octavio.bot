@@ -12,6 +12,8 @@ Scope: applies to files under `packages/assistant-core`.
 
 - `ChatStore` owns SQLite persistence.
 - `ChatStore` persists the active conversation pointer in SQLite (`app_state`).
+- `ChatStore` also stores channel/message metadata so interfaces can render the
+  same conversation differently without changing LLM context shape.
 - `AssistantRunner` owns model execution and streaming behavior.
 - tools should be pure helpers when possible, with thin wrappers for call logging.
 
