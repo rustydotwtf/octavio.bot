@@ -2,10 +2,18 @@ import { tool } from "ai";
 import { z } from "zod";
 
 import type { ChatStore } from "./db";
+import { runListMemoriesTool } from "./list-memories";
 import type { MemoryStore } from "./memory-db";
 import { runPatchFileTool } from "./patch-file";
 import { runReadFileTool } from "./read-file";
-import { getMemoryInput, saveMemoryInput, webSearchInput } from "./types";
+import { runSearchMemoryTool } from "./search-memory";
+import {
+  getMemoryInput,
+  listMemoryInput,
+  saveMemoryInput,
+  searchMemoryInput,
+  webSearchInput,
+} from "./types";
 import { runWebSearchTool } from "./web-search";
 
 interface BuildToolsInput {
@@ -73,6 +81,39 @@ export const buildAssistantTools = ({
       }
     },
     inputSchema: getMemoryInput,
+  }),
+  list_memories: tool({
+    description:
+      "List saved memories in reverse chronological order with pagination.",
+    execute: (input) => {
+      const callId = store.startToolCall({
+        channel,
+        conversationId,
+        inputJson: toJson(input),
+        metadataJson: channelMetadata ? toJson(channelMetadata) : undefined,
+        toolName: "list_memories",
+      });
+
+      try {
+        const result = runListMemoriesTool(input, memoryStore);
+        store.finishToolCall({
+          id: callId,
+          outputJson: toJson(result),
+          status: "completed",
+        });
+        return result;
+      } catch (error: unknown) {
+        store.finishToolCall({
+          id: callId,
+          outputJson: toJson({
+            error: error instanceof Error ? error.message : String(error),
+          }),
+          status: "failed",
+        });
+        throw error;
+      }
+    },
+    inputSchema: listMemoryInput,
   }),
   patch_file: tool({
     description: "Find and replace text in a file.",
@@ -182,6 +223,39 @@ export const buildAssistantTools = ({
       }
     },
     inputSchema: saveMemoryInput,
+  }),
+  search_memory: tool({
+    description:
+      "Search memory titles and Markdown bodies by substring and return concise snippets.",
+    execute: (input) => {
+      const callId = store.startToolCall({
+        channel,
+        conversationId,
+        inputJson: toJson(input),
+        metadataJson: channelMetadata ? toJson(channelMetadata) : undefined,
+        toolName: "search_memory",
+      });
+
+      try {
+        const result = runSearchMemoryTool(input, memoryStore);
+        store.finishToolCall({
+          id: callId,
+          outputJson: toJson(result),
+          status: "completed",
+        });
+        return result;
+      } catch (error: unknown) {
+        store.finishToolCall({
+          id: callId,
+          outputJson: toJson({
+            error: error instanceof Error ? error.message : String(error),
+          }),
+          status: "failed",
+        });
+        throw error;
+      }
+    },
+    inputSchema: searchMemoryInput,
   }),
   web_search: tool({
     description:

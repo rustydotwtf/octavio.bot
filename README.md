@@ -11,7 +11,7 @@ Current app:
 
 - `apps/review-bot-cli` - publishable PR review CLI package (`@octavio.bot/review`)
 - `apps/site` - static product site for `octavio.bot`
-- `apps/assistant-api` - local Elysia chat assistant API with SQLite chat/memory stores and a durable single active conversation
+- `apps/assistant-api` - local Elysia chat assistant API with SQLite chat/memory stores, memory discovery/listing (`search_memory`, `list_memories`), and a durable single active conversation
 - `apps/assistant-telegram` - Telegram adapter for the assistant runtime (polling + webhook) sharing the same chat/memory stores
 
 Current shared packages:

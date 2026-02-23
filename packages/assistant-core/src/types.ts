@@ -51,6 +51,20 @@ export const getMemoryInput = z.object({
 
 export type GetMemoryInput = z.infer<typeof getMemoryInput>;
 
+export const listMemoryInput = z.object({
+  limit: z.number().int().positive().max(25).default(10),
+  page: z.number().int().positive().default(1),
+});
+
+export type ListMemoryInput = z.infer<typeof listMemoryInput>;
+
+export const searchMemoryInput = z.object({
+  limit: z.number().int().positive().max(10).default(5),
+  query: z.string().trim().min(1),
+});
+
+export type SearchMemoryInput = z.infer<typeof searchMemoryInput>;
+
 export const messageRole = z.enum(["user", "assistant", "system"]);
 export type MessageRole = z.infer<typeof messageRole>;
 

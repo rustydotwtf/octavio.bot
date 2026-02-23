@@ -82,6 +82,8 @@ Security posture:
 - `web_search`
 - `save_memory` (title + Markdown body, always inserts a new row)
 - `get_memory` (exact-title lookup, newest first)
+- `search_memory` (substring search over titles + bodies with concise markdown snippets)
+- `list_memories` (paginated memory listing with markdown snippets and next-page hints)
 
 ## Troubleshooting Debug Logs
 

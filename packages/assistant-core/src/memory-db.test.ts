@@ -76,4 +76,80 @@ describe("memory store", () => {
 
     expect(joyfulIds.size).toBe(25);
   });
+
+  it("searches memory titles and bodies with ranking", () => {
+    const store = new MemoryStore(createDbPath());
+
+    store.saveMemory({
+      bodyMarkdown: "Body-only reference to roadmap discovery work.",
+      title: "release-notes",
+    });
+    store.saveMemory({
+      bodyMarkdown: "Planning details for next quarter.",
+      title: "roadmap-v2",
+    });
+    store.saveMemory({
+      bodyMarkdown: "Canonical roadmap memory.",
+      title: "roadmap",
+    });
+
+    const matches = store.searchMemories("roadmap", 10);
+
+    expect(matches).toHaveLength(3);
+    expect(matches[0]?.title).toBe("roadmap");
+    expect(matches[1]?.title).toBe("roadmap-v2");
+    expect(matches[2]?.title).toBe("release-notes");
+    expect(matches[2]?.snippet.toLowerCase()).toContain("roadmap");
+  });
+
+  it("searches case-insensitively and respects limits", () => {
+    const store = new MemoryStore(createDbPath());
+
+    store.saveMemory({
+      bodyMarkdown: "alpha body",
+      title: "User Preferences",
+    });
+    store.saveMemory({
+      bodyMarkdown: "beta body",
+      title: "user-profile",
+    });
+
+    const limited = store.searchMemories("USER", 1);
+
+    expect(limited).toHaveLength(1);
+    expect(limited[0]?.title.toLowerCase()).toContain("user");
+  });
+
+  it("lists memories with stable pagination metadata", () => {
+    const store = new MemoryStore(createDbPath());
+
+    store.saveMemory({
+      bodyMarkdown: "first entry",
+      title: "alpha",
+    });
+    store.saveMemory({
+      bodyMarkdown: "second entry",
+      title: "beta",
+    });
+    store.saveMemory({
+      bodyMarkdown: "third entry",
+      title: "gamma",
+    });
+
+    const firstPage = store.listMemoriesPage(1, 2);
+    const secondPage = store.listMemoriesPage(2, 2);
+
+    expect(firstPage.totalCount).toBe(3);
+    expect(firstPage.totalPages).toBe(2);
+    expect(firstPage.hasNextPage).toBeTrue();
+    expect(firstPage.memories).toHaveLength(2);
+    expect(firstPage.memories[0]?.title).toBe("gamma");
+    expect(firstPage.memories[1]?.title).toBe("beta");
+
+    expect(secondPage.totalCount).toBe(3);
+    expect(secondPage.totalPages).toBe(2);
+    expect(secondPage.hasNextPage).toBeFalse();
+    expect(secondPage.memories).toHaveLength(1);
+    expect(secondPage.memories[0]?.title).toBe("alpha");
+  });
 });

@@ -10,6 +10,21 @@ interface ChatMemoryRow {
   title: string;
 }
 
+interface ChatMemorySearchRow {
+  bodyMarkdown: string;
+  createdAt: string;
+  joyfulId: string;
+  matchRank: number;
+  title: string;
+}
+
+interface ChatMemoryListRow {
+  bodyMarkdown: string;
+  createdAt: string;
+  joyfulId: string;
+  title: string;
+}
+
 interface MemoryStoreOptions {
   joyfulIdAttempts?: number;
   joyfulIdSegments?: number;
@@ -18,8 +33,68 @@ interface MemoryStoreOptions {
 const DEFAULT_JOYFUL_ID_ATTEMPTS = 10;
 const DEFAULT_JOYFUL_ID_SEGMENTS = 4;
 const DEFAULT_SQLITE_BUSY_TIMEOUT_MS = 5000;
+const DEFAULT_SEARCH_SNIPPET_LENGTH = 140;
 
 const nowIso = (): string => new Date().toISOString();
+
+const escapeLikePattern = (value: string): string => {
+  let escaped = "";
+
+  for (const character of value) {
+    if (character === "\\" || character === "%" || character === "_") {
+      escaped += "\\";
+    }
+    escaped += character;
+  }
+
+  return escaped;
+};
+
+const normalizeSnippetText = (value: string): string =>
+  value.trim().split(/\s+/).join(" ");
+
+const toSnippet = (
+  bodyMarkdown: string,
+  query: string,
+  maxLength = DEFAULT_SEARCH_SNIPPET_LENGTH
+): string => {
+  const normalizedBody = normalizeSnippetText(bodyMarkdown);
+  if (normalizedBody.length === 0) {
+    return "(empty memory body)";
+  }
+
+  const trimmedQuery = query.trim();
+  if (trimmedQuery.length === 0) {
+    const head = normalizedBody.slice(0, maxLength).trimEnd();
+    return head.length < normalizedBody.length ? `${head}...` : head;
+  }
+
+  const lowerBody = normalizedBody.toLowerCase();
+  const lowerQuery = trimmedQuery.toLowerCase();
+  const queryIndex = lowerBody.indexOf(lowerQuery);
+
+  if (queryIndex === -1) {
+    const head = normalizedBody.slice(0, maxLength).trimEnd();
+    return head.length < normalizedBody.length ? `${head}...` : head;
+  }
+
+  const minimumContext = 20;
+  const aroundMatch = Math.max(
+    minimumContext,
+    Math.floor((maxLength - lowerQuery.length) / 2)
+  );
+  const start = Math.max(0, queryIndex - aroundMatch);
+  const end = Math.min(
+    normalizedBody.length,
+    queryIndex + lowerQuery.length + aroundMatch
+  );
+  const sliced = normalizedBody.slice(start, end).trim();
+  const clipped = sliced.slice(0, maxLength).trimEnd();
+
+  const prefix = start > 0 ? "..." : "";
+  const suffix = end < normalizedBody.length ? "..." : "";
+  return `${prefix}${clipped}${suffix}`;
+};
 
 const getDirectoryPath = (filePath: string): string => {
   const separatorIndex = Math.max(
@@ -111,6 +186,29 @@ export interface ChatMemory {
   title: string;
 }
 
+export interface ChatMemorySearchResult {
+  createdAt: string;
+  joyfulId: string;
+  snippet: string;
+  title: string;
+}
+
+export interface ChatMemoryListResult {
+  createdAt: string;
+  joyfulId: string;
+  snippet: string;
+  title: string;
+}
+
+export interface ChatMemoryListPage {
+  hasNextPage: boolean;
+  limit: number;
+  memories: ChatMemoryListResult[];
+  page: number;
+  totalCount: number;
+  totalPages: number;
+}
+
 export class MemoryStore {
   private readonly db: Database;
   private readonly joyfulIdAttempts: number;
@@ -148,6 +246,86 @@ export class MemoryStore {
         joyfulId,
         title: entryTitle,
       }));
+  }
+
+  public searchMemories(query: string, limit = 5): ChatMemorySearchResult[] {
+    const trimmedQuery = query.trim();
+    if (trimmedQuery.length === 0) {
+      throw new Error("Memory query must be non-empty.");
+    }
+
+    const boundedLimit = Math.max(1, Math.min(limit, 10));
+    const exactTitle = trimmedQuery.toLowerCase();
+    const pattern = `%${escapeLikePattern(exactTitle)}%`;
+
+    return this.db
+      .query<
+        ChatMemorySearchRow,
+        {
+          exactTitle: string;
+          limit: number;
+          pattern: string;
+        }
+      >(
+        "SELECT joyful_id as joyfulId, title, body_markdown as bodyMarkdown, created_at as createdAt, CASE WHEN lower(title) = $exactTitle THEN 0 WHEN lower(title) LIKE $pattern ESCAPE '\\' THEN 1 ELSE 2 END as matchRank FROM memory_entries WHERE lower(title) LIKE $pattern ESCAPE '\\' OR lower(body_markdown) LIKE $pattern ESCAPE '\\' ORDER BY matchRank ASC, created_at DESC, rowid DESC LIMIT $limit"
+      )
+      .all({
+        exactTitle,
+        limit: boundedLimit,
+        pattern,
+      })
+      .map(({ bodyMarkdown, createdAt, joyfulId, title }) => ({
+        createdAt,
+        joyfulId,
+        snippet: toSnippet(bodyMarkdown, trimmedQuery),
+        title,
+      }));
+  }
+
+  public listMemoriesPage(page = 1, limit = 10): ChatMemoryListPage {
+    const boundedPage = Math.max(1, page);
+    const boundedLimit = Math.max(1, Math.min(limit, 25));
+
+    const totalCount =
+      this.db
+        .query<{ totalCount: number }, Record<string, never>>(
+          "SELECT COUNT(*) as totalCount FROM memory_entries"
+        )
+        .get({})?.totalCount ?? 0;
+
+    const totalPages =
+      totalCount === 0 ? 0 : Math.ceil(totalCount / boundedLimit);
+    const offset = (boundedPage - 1) * boundedLimit;
+
+    const memories = this.db
+      .query<
+        ChatMemoryListRow,
+        {
+          limit: number;
+          offset: number;
+        }
+      >(
+        "SELECT joyful_id as joyfulId, title, body_markdown as bodyMarkdown, created_at as createdAt FROM memory_entries ORDER BY created_at DESC, rowid DESC LIMIT $limit OFFSET $offset"
+      )
+      .all({
+        limit: boundedLimit,
+        offset,
+      })
+      .map(({ bodyMarkdown, createdAt, joyfulId, title }) => ({
+        createdAt,
+        joyfulId,
+        snippet: toSnippet(bodyMarkdown, ""),
+        title,
+      }));
+
+    return {
+      hasNextPage: boundedPage * boundedLimit < totalCount,
+      limit: boundedLimit,
+      memories,
+      page: boundedPage,
+      totalCount,
+      totalPages,
+    };
   }
 
   public saveMemory(input: {

@@ -367,7 +367,7 @@ export class AssistantRunner {
       },
       stopWhen: stepCountIs(6),
       system:
-        "You are a practical assistant. Use tools when you need file data, file updates, memory storage/retrieval, or current web information. Keep responses concise.",
+        "You are a practical assistant. Use tools when you need file data, file updates, memory listing/search/storage/retrieval, or current web information. Keep responses concise.",
       tools: buildAssistantTools({
         channel,
         channelMetadata: input.channelMetadata,
