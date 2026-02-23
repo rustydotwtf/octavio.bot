@@ -11,6 +11,8 @@ Current app:
 
 - `apps/review-bot-cli` - publishable PR review CLI package (`@octavio.bot/review`)
 - `apps/site` - static product site for `octavio.bot`
+- `apps/assistant-api` - local Elysia chat assistant API with SQLite chat/memory stores, memory discovery/listing (`search_memory`, `list_memories`), and a durable single active conversation
+- `apps/assistant-telegram` - Telegram adapter for the assistant runtime (polling + webhook) sharing the same chat/memory stores
 
 Current shared packages:
 
@@ -19,6 +21,7 @@ Current shared packages:
 - `packages/github-review` - GitHub PR metadata and changed-file helpers
 - `packages/agent-code-review` - review orchestration and policy evaluation
 - `packages/prompts` - publishable prompt package (`@octavio.bot/prompts`)
+- `packages/assistant-core` - reusable assistant runtime (chat runner, file/web/memory tools, SQLite stores)
 
 Prompt authoring and packaging:
 
@@ -32,6 +35,8 @@ App-specific setup, usage, and behavior live with each app.
 
 - Review CLI docs: `apps/review-bot-cli/README.md`
 - Site docs: `apps/site/README.md`
+- Assistant API docs: `apps/assistant-api/README.md`
+- Assistant Telegram docs: `apps/assistant-telegram/README.md`
 
 ## Development Commands
 
@@ -43,12 +48,15 @@ bun run build
 bun run test
 ```
 
-Root `check`, `build`, and `test` commands are orchestrated via Turborepo (`turbo run ...`).
+Root `dev`, `check`, `build`, and `test` commands are orchestrated via Turborepo (`turbo run ...`).
 Root `sync` runs workspace sync tasks (prompt bundling for the review CLI and generated prompt docs for the site).
 
 Useful workflow commands:
 
-- Run default root dev workflow (currently site): `bun run dev`
+- Run full local app stack (all app `dev` scripts): `bun run dev`
+- Run local assistant API: `bun run assistant:api:dev`
+- Run local Telegram assistant adapter: `bun run assistant:telegram:dev`
+- Run assistant API + Telegram together: `bun run assistant:dev`
 - Local review CLI source run: `bun run review-bot ...`
 - Build publishable review CLI: `bun run review-cli:build`
 - Run site locally with prompt sync watch: `bun run site:dev`
@@ -57,6 +65,16 @@ Useful workflow commands:
 - Build site: `bun run --cwd apps/site build`
 - Deploy site (Vercel): `bun run --cwd apps/site deploy`
 - Initialize Octavio files in any repo: `bunx --bun @octavio.bot/review@latest init --workdir .`
+
+## Environment
+
+- Copy `.env.example` to `.env` for local setup.
+- `.env` stores secrets only (`AI_GATEWAY_API_KEY`, `BRAVE_SEARCH_API_KEY`, `TELEGRAM_BOT_TOKEN`, optional `TELEGRAM_WEBHOOK_SECRET`).
+- Assistant non-secret runtime settings live in root `settings.ts`.
+- Assistant model is fixed to `zai/glm-5` in `settings.ts`.
+- Assistant memory defaults to `assistant.memoryDatabasePath = ~/.octavio/assistant-memory.sqlite`.
+- Assistant API defaults to `assistantApi.host = 127.0.0.1` and `assistantApi.port = 4100`.
+- Assistant API is intentionally local-first and has no built-in auth; do not expose it directly to untrusted networks.
 
 ## CI
 

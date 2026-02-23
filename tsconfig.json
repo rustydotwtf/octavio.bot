@@ -13,6 +13,7 @@
     "baseUrl": ".",
     "paths": {
       "@octavio.bot/prompts": ["packages/prompts/src/index.ts"],
+      "@octavio.bot/assistant-core": ["packages/assistant-core/src/index.ts"],
       "@octavio.bot/agent-code-review": [
         "packages/agent-code-review/src/index.ts"
       ],
@@ -36,5 +37,9 @@
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false
   },
-  "include": ["apps/review-bot-cli/src/**/*.ts", "packages/**/*.ts"]
+  "include": [
+    "apps/review-bot-cli/src/**/*.ts",
+    "apps/assistant-api/src/**/*.ts",
+    "packages/**/*.ts"
+  ]
 }

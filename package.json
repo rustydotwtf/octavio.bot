@@ -9,7 +9,10 @@
   "scripts": {
     "build": "turbo run build --filter=./apps/* --filter=./packages/* && bun x tsc --noEmit",
     "ci": "bun run check && bun run build && bun run test",
-    "dev": "bun run site:dev",
+    "dev": "turbo run dev --filter=./apps/*",
+    "assistant:dev": "bun run --parallel assistant:api:dev assistant:telegram:dev",
+    "assistant:api:dev": "bun run --cwd apps/assistant-api dev",
+    "assistant:telegram:dev": "bun run --cwd apps/assistant-telegram dev",
     "review-bot": "bun run apps/review-bot-cli/src/index.ts",
     "review-cli:build": "bun run --cwd apps/review-bot-cli build",
     "site:dev": "bun run --cwd apps/site watch:prompts & bun run --cwd apps/site dev",

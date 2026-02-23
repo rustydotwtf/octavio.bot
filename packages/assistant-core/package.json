@@ -1,0 +1,17 @@
+{
+  "name": "@octavio.bot/assistant-core",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@ai-sdk/gateway": "^1.0.0",
+    "ai": "^5.0.52",
+    "joyful": "^1.0.0",
+    "zod": "^4.1.12"
+  }
+}

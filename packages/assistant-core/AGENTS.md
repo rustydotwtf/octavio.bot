@@ -1,0 +1,35 @@
+# Assistant Core Agent Notes
+
+Scope: applies to files under `packages/assistant-core`.
+
+## Package Intent
+
+- Shared local assistant runtime.
+- Keep APIs small and easy to evolve.
+- Add abstractions only when there are at least two real call sites.
+
+## Runtime Design
+
+- `ChatStore` owns SQLite persistence.
+- `MemoryStore` owns append-only memory persistence in a separate SQLite file.
+- `ChatStore` persists the active conversation pointer in SQLite (`app_state`).
+- `ChatStore` also stores channel/message metadata so interfaces can render the
+  same conversation differently without changing LLM context shape.
+- `ChatStore` stores bounded debug telemetry in SQLite (`debug_events`) as a
+  shared ring buffer controlled by `ChatStore` `debugLogMb` configuration.
+- `AssistantRunner` owns model execution and streaming behavior.
+- tools should be pure helpers when possible, with thin wrappers for call logging.
+- Memory tools should remain migration-friendly: preserve title/body markdown and
+  stable ids (`id` UUID + `joyful_id`) with minimal assumptions.
+- File tools must stay constrained to the configured workspace directory and reject
+  traversal/out-of-workspace paths.
+
+## Debugging Workflow
+
+- For model/tool-call incidents, inspect `debug_events` first, then correlate
+  with `tool_calls` and `messages` by `conversation_id`/`request_id`.
+- Keep debug events structured and append-only; avoid in-place mutation.
+
+## Testing
+
+- Prefer focused unit tests for file tools and persistence helpers.

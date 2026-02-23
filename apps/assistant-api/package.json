@@ -1,0 +1,14 @@
+{
+  "name": "assistant-api",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun --env-file ../../.env src/index.ts",
+    "test": "bun test --pass-with-no-tests"
+  },
+  "dependencies": {
+    "@octavio.bot/assistant-core": "workspace:*",
+    "elysia": "^1.4.9",
+    "zod": "^4.1.12"
+  }
+}

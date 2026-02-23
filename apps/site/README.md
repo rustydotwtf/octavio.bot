@@ -11,6 +11,8 @@ bun install
 bun run site:dev
 ```
 
+From repository root, `bun run dev` starts all app dev scripts (including the site dev loop).
+
 `site:dev` runs a prompt watcher plus the site dev server. Prompt markdown edits regenerate site content automatically; refresh the browser to see changes.
 
 Useful app commands:
