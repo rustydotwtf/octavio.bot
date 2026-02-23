@@ -21,7 +21,7 @@ Current shared packages:
 - `packages/github-review` - GitHub PR metadata and changed-file helpers
 - `packages/agent-code-review` - review orchestration and policy evaluation
 - `packages/prompts` - publishable prompt package (`@octavio.bot/prompts`)
-- `packages/assistant-core` - reusable assistant runtime (chat runner, file tools, SQLite store)
+- `packages/assistant-core` - reusable assistant runtime (chat runner, file + web search tools, SQLite store)
 
 Prompt authoring and packaging:
 
@@ -69,7 +69,7 @@ Useful workflow commands:
 ## Environment
 
 - Copy `.env.example` to `.env` for local setup.
-- `.env` stores secrets only (`AI_GATEWAY_API_KEY`, `TELEGRAM_BOT_TOKEN`, optional `TELEGRAM_WEBHOOK_SECRET`).
+- `.env` stores secrets only (`AI_GATEWAY_API_KEY`, `BRAVE_SEARCH_API_KEY`, `TELEGRAM_BOT_TOKEN`, optional `TELEGRAM_WEBHOOK_SECRET`).
 - Assistant non-secret runtime settings live in root `settings.ts`.
 - Assistant model is fixed to `zai/glm-5` in `settings.ts`.
 - Assistant API defaults to `assistantApi.host = 127.0.0.1` and `assistantApi.port = 4100`.

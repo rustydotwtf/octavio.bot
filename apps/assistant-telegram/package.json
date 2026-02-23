@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "bun run src/index.ts",
+    "dev": "bun --env-file ../../.env src/index.ts",
     "test": "bun test --pass-with-no-tests"
   },
   "dependencies": {

@@ -225,11 +225,11 @@ Task orchestration notes:
 
 ### Runtime Expectations
 
-- `.env` should include secrets only (for example `GITHUB_TOKEN`, `OPENCODE_API_KEY`, `AI_GATEWAY_API_KEY`, `TELEGRAM_BOT_TOKEN`); non-secret runtime defaults should live in code-level settings
+- `.env` should include secrets only (for example `GITHUB_TOKEN`, `OPENCODE_API_KEY`, `AI_GATEWAY_API_KEY`, `BRAVE_SEARCH_API_KEY`, `TELEGRAM_BOT_TOKEN`); non-secret runtime defaults should live in code-level settings
 - Assistant runtime non-secrets are configured in root `settings.ts` (model, db path, debug log cap, API host/port, Telegram mode/polling/webhook defaults)
-- Assistant API local env should include `AI_GATEWAY_API_KEY`
+- Assistant API local env should include `AI_GATEWAY_API_KEY`; include `BRAVE_SEARCH_API_KEY` for web search tool calls
 - Assistant API defaults to loopback (`assistantApi.host = 127.0.0.1`) and is intentionally local-first with no built-in auth
-- Telegram adapter env should include `TELEGRAM_BOT_TOKEN` and `AI_GATEWAY_API_KEY`; `TELEGRAM_WEBHOOK_SECRET` is required in webhook mode
+- Telegram adapter env should include `TELEGRAM_BOT_TOKEN` and `AI_GATEWAY_API_KEY`; include `BRAVE_SEARCH_API_KEY` for web search tool calls; `TELEGRAM_WEBHOOK_SECRET` is required in webhook mode
 - CLI requires `opencode` binary: local mode is detect-only; CI mode auto-installs when missing; `--install-opencode` forces local auto-install
 - Default artifact execution is `agent` (OpenCode can write artifacts in-workspace); `external_directory` remains denied
 - Keep OpenCode prompts constrained to the provided workspace directory

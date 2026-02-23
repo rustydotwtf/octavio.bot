@@ -27,6 +27,13 @@ export const patchFileInput = z.object({
 
 export type PatchFileInput = z.infer<typeof patchFileInput>;
 
+export const webSearchInput = z.object({
+  limit: z.number().int().positive().max(10).default(5),
+  query: z.string().min(1),
+});
+
+export type WebSearchInput = z.infer<typeof webSearchInput>;
+
 export const messageRole = z.enum(["user", "assistant", "system"]);
 export type MessageRole = z.infer<typeof messageRole>;
 

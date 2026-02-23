@@ -4,6 +4,8 @@ import { z } from "zod";
 import type { ChatStore } from "./db";
 import { runPatchFileTool } from "./patch-file";
 import { runReadFileTool } from "./read-file";
+import { webSearchInput } from "./types";
+import { runWebSearchTool } from "./web-search";
 
 interface BuildToolsInput {
   channel: string;
@@ -100,6 +102,39 @@ export const buildAssistantTools = ({
       offset: z.number().int().positive().default(1),
       path: z.string().min(1),
     }),
+  }),
+  web_search: tool({
+    description:
+      "Search the web for current information and return normalized top results.",
+    execute: async (input) => {
+      const callId = store.startToolCall({
+        channel,
+        conversationId,
+        inputJson: toJson(input),
+        metadataJson: channelMetadata ? toJson(channelMetadata) : undefined,
+        toolName: "web_search",
+      });
+
+      try {
+        const result = await runWebSearchTool(input);
+        store.finishToolCall({
+          id: callId,
+          outputJson: toJson(result),
+          status: "completed",
+        });
+        return result;
+      } catch (error: unknown) {
+        store.finishToolCall({
+          id: callId,
+          outputJson: toJson({
+            error: error instanceof Error ? error.message : String(error),
+          }),
+          status: "failed",
+        });
+        throw error;
+      }
+    },
+    inputSchema: webSearchInput,
   }),
 });
 

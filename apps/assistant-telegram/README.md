@@ -27,7 +27,10 @@ bun run assistant:dev
 
 - `TELEGRAM_BOT_TOKEN` (required)
 - `AI_GATEWAY_API_KEY` (required)
+- `BRAVE_SEARCH_API_KEY` (required for `web_search` tool calls)
 - `TELEGRAM_WEBHOOK_SECRET` (required in webhook mode)
+
+The `dev` script loads env from the repository root `.env` (`../../.env`).
 
 All assistant non-secret runtime defaults now come from root `settings.ts`.
 

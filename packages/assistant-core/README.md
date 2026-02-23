@@ -6,8 +6,13 @@ Includes:
 
 - chat runner built on Vercel AI SDK
 - SQLite persistence with Bun SQLite
-- built-in tools (`read_file`, `patch_file`) constrained to the configured workspace directory
+- built-in tools (`read_file`, `patch_file`, `web_search`)
+- `read_file` and `patch_file` stay constrained to the configured workspace directory
 - bounded debug event log (`debug_events`) for LLM/runtime troubleshooting
+
+## Tool Environment
+
+- `web_search` uses Brave Search and requires `BRAVE_SEARCH_API_KEY`.
 
 ## Debug Logging
 

@@ -56,6 +56,9 @@ Responses include `x-conversation-id`.
 ## Environment
 
 - `AI_GATEWAY_API_KEY` (required)
+- `BRAVE_SEARCH_API_KEY` (required for `web_search` tool calls)
+
+The `dev` script loads env from the repository root `.env` (`../../.env`).
 
 All assistant non-secret runtime defaults now come from root `settings.ts`.
 
@@ -74,6 +77,7 @@ Security posture:
 
 - `read_file`
 - `patch_file`
+- `web_search`
 
 ## Troubleshooting Debug Logs
 
