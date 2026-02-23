@@ -9,9 +9,10 @@ export const settings = {
   assistant: {
     databasePath: defaultAssistantDbPath,
     debugLogMb: 64,
-    model: "openai/gpt-5",
+    model: "zai/glm-5",
   },
   assistantApi: {
+    host: "127.0.0.1",
     port: 4100,
   },
   assistantTelegram: {

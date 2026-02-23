@@ -18,6 +18,8 @@ Scope: applies to files under `packages/assistant-core`.
   shared ring buffer controlled by `ChatStore` `debugLogMb` configuration.
 - `AssistantRunner` owns model execution and streaming behavior.
 - tools should be pure helpers when possible, with thin wrappers for call logging.
+- File tools must stay constrained to the configured workspace directory and reject
+  traversal/out-of-workspace paths.
 
 ## Debugging Workflow
 

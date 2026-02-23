@@ -20,7 +20,7 @@ Run API + Telegram together:
 bun run assistant:dev
 ```
 
-Default server URL: `http://localhost:4100`
+Default server URL: `http://127.0.0.1:4100`
 
 ## Endpoints
 
@@ -62,7 +62,13 @@ All assistant non-secret runtime defaults now come from root `settings.ts`.
 - `assistant.model` is fixed to `zai/glm-5`
 - `assistant.databasePath` defaults to `~/.octavio/assistant.sqlite`
 - `assistant.debugLogMb` defaults to `64` (`0` disables debug-event writes)
+- `assistantApi.host` defaults to `127.0.0.1`
 - `assistantApi.port` defaults to `4100`
+
+Security posture:
+
+- This API is intentionally local-first and does not include built-in request auth.
+- Keep it bound to loopback (`127.0.0.1`) unless you add your own network/auth controls.
 
 ## Built-in tools
 

@@ -6,7 +6,7 @@ Includes:
 
 - chat runner built on Vercel AI SDK
 - SQLite persistence with Bun SQLite
-- built-in tools (`read_file`, `patch_file`)
+- built-in tools (`read_file`, `patch_file`) constrained to the configured workspace directory
 - bounded debug event log (`debug_events`) for LLM/runtime troubleshooting
 
 ## Debug Logging

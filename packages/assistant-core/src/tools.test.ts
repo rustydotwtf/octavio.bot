@@ -3,19 +3,23 @@ import { afterEach, describe, expect, it } from "bun:test";
 import { runPatchFileTool } from "./patch-file";
 import { runReadFileTool } from "./read-file";
 
-const createdFiles: string[] = [];
+const createdPaths: string[] = [];
 
 afterEach(async () => {
-  for (const filePath of createdFiles) {
-    await Bun.file(filePath).delete();
+  for (const path of createdPaths) {
+    try {
+      await Bun.file(path).delete();
+    } catch {
+      // Cleanup is best-effort.
+    }
   }
-  createdFiles.length = 0;
+  createdPaths.length = 0;
 });
 
 describe("assistant tools", () => {
   it("reads file with offset and limit", async () => {
-    const filePath = `/tmp/octavio-assistant-read-${crypto.randomUUID()}.txt`;
-    createdFiles.push(filePath);
+    const filePath = `octavio-assistant-read-${crypto.randomUUID()}.txt`;
+    createdPaths.push(filePath);
     await Bun.write(filePath, "line1\nline2\nline3\nline4\n");
 
     const result = await runReadFileTool(
@@ -29,12 +33,13 @@ describe("assistant tools", () => {
 
     expect(result.content).toBe("line2\nline3");
     expect(result.lineCount).toBe(2);
+    expect(result.path.endsWith(`/${filePath}`)).toBeTrue();
     expect(result.truncated).toBeTrue();
   });
 
   it("patches all matching text in a file", async () => {
-    const filePath = `/tmp/octavio-assistant-patch-${crypto.randomUUID()}.txt`;
-    createdFiles.push(filePath);
+    const filePath = `octavio-assistant-patch-${crypto.randomUUID()}.txt`;
+    createdPaths.push(filePath);
     await Bun.write(filePath, "alpha beta alpha\n");
 
     const result = await runPatchFileTool(
@@ -51,5 +56,36 @@ describe("assistant tools", () => {
     expect(result.changed).toBeTrue();
     expect(result.replacements).toBe(2);
     expect(updated).toBe("omega beta omega\n");
+  });
+
+  it("rejects read_file path traversal outside the workspace", async () => {
+    await expect(
+      runReadFileTool(
+        {
+          limit: 1,
+          offset: 1,
+          path: "../package.json",
+        },
+        process.cwd()
+      )
+    ).rejects.toThrow("Path escapes workspace directory");
+  });
+
+  it("rejects patch_file absolute paths outside the workspace", async () => {
+    const filePath = `/tmp/octavio-assistant-outside-${crypto.randomUUID()}.txt`;
+    createdPaths.push(filePath);
+    await Bun.write(filePath, "hello");
+
+    await expect(
+      runPatchFileTool(
+        {
+          find: "hello",
+          occurrence: "first",
+          path: filePath,
+          replace: "world",
+        },
+        process.cwd()
+      )
+    ).rejects.toThrow("Path escapes workspace directory");
   });
 });

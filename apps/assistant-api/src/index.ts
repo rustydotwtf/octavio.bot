@@ -54,7 +54,7 @@ const app = new Elysia()
     return run.response;
   });
 
-const { port } = assistantApi;
-app.listen(port);
+const { host, port } = assistantApi;
+app.listen({ hostname: host, port });
 
-process.stdout.write(`assistant-api listening on http://localhost:${port}\n`);
+process.stdout.write(`assistant-api listening on http://${host}:${port}\n`);

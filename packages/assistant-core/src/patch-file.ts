@@ -1,10 +1,6 @@
 import { patchFileInput } from "./types";
 import type { PatchFileInput } from "./types";
-
-const toAbsolutePath = (workspaceDirectory: string, filePath: string): string =>
-  filePath.startsWith("/")
-    ? filePath
-    : `${workspaceDirectory.replace(/\/$/u, "")}/${filePath}`;
+import { resolveWorkspacePath } from "./workspace-path";
 
 const replaceFirst = (
   value: string,
@@ -59,7 +55,7 @@ export const runPatchFileTool = async (
     throw new Error("patch_file requires a non-empty 'find' value.");
   }
 
-  const path = toAbsolutePath(workspaceDirectory, parsed.path);
+  const path = resolveWorkspacePath(workspaceDirectory, parsed.path);
   const file = Bun.file(path);
   if (!(await file.exists())) {
     throw new Error(`File does not exist: ${path}`);

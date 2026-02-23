@@ -1,10 +1,6 @@
 import { readFileInput } from "./types";
 import type { ReadFileInput } from "./types";
-
-const toAbsolutePath = (workspaceDirectory: string, filePath: string): string =>
-  filePath.startsWith("/")
-    ? filePath
-    : `${workspaceDirectory.replace(/\/$/u, "")}/${filePath}`;
+import { resolveWorkspacePath } from "./workspace-path";
 
 const sliceByLine = (
   text: string,
@@ -33,7 +29,7 @@ export const runReadFileTool = async (
   truncated: boolean;
 }> => {
   const parsed = readFileInput.parse(input);
-  const path = toAbsolutePath(workspaceDirectory, parsed.path);
+  const path = resolveWorkspacePath(workspaceDirectory, parsed.path);
   const file = Bun.file(path);
 
   if (!(await file.exists())) {

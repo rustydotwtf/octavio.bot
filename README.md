@@ -72,6 +72,8 @@ Useful workflow commands:
 - `.env` stores secrets only (`AI_GATEWAY_API_KEY`, `TELEGRAM_BOT_TOKEN`, optional `TELEGRAM_WEBHOOK_SECRET`).
 - Assistant non-secret runtime settings live in root `settings.ts`.
 - Assistant model is fixed to `zai/glm-5` in `settings.ts`.
+- Assistant API defaults to `assistantApi.host = 127.0.0.1` and `assistantApi.port = 4100`.
+- Assistant API is intentionally local-first and has no built-in auth; do not expose it directly to untrusted networks.
 
 ## CI
 

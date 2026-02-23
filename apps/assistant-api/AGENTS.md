@@ -24,6 +24,8 @@ Run from repository root:
 - Shares one active conversation with other interfaces (for example Telegram) when
   they use the same `settings.assistant.databasePath` value.
 - `POST /chat` with `"/new"` rotates the shared active conversation.
+- Default bind is `settings.assistantApi.host = 127.0.0.1`.
+- This service is intentionally local-first and currently has no built-in API auth.
 
 ## Documentation Sync
 
