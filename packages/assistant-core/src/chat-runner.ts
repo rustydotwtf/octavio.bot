@@ -2,6 +2,7 @@ import { gateway } from "@ai-sdk/gateway";
 import { stepCountIs, streamText, wrapLanguageModel } from "ai";
 
 import type { ChatStore } from "./db";
+import type { MemoryStore } from "./memory-db";
 import { buildAssistantTools } from "./tools";
 import type { ChatRequestInput } from "./types";
 
@@ -10,6 +11,7 @@ const DEFAULT_CHANNEL = "api";
 
 interface AssistantRunnerOptions {
   defaultModel?: string;
+  memoryStore: MemoryStore;
   store: ChatStore;
   workspaceDirectory: string;
 }
@@ -60,11 +62,13 @@ const getChunkStepId = (chunk: unknown): string | undefined => {
 export class AssistantRunner {
   private readonly defaultModel: string;
   private readonly gatewayApiKey = process.env.AI_GATEWAY_API_KEY;
+  private readonly memoryStore: MemoryStore;
   private readonly store: ChatStore;
   private readonly workspaceDirectory: string;
 
   public constructor(options: AssistantRunnerOptions) {
     this.defaultModel = options.defaultModel ?? DEFAULT_MODEL;
+    this.memoryStore = options.memoryStore;
     this.store = options.store;
     this.workspaceDirectory = options.workspaceDirectory;
   }
@@ -363,11 +367,12 @@ export class AssistantRunner {
       },
       stopWhen: stepCountIs(6),
       system:
-        "You are a practical assistant. Use tools when you need file data, file updates, or current web information. Keep responses concise.",
+        "You are a practical assistant. Use tools when you need file data, file updates, memory storage/retrieval, or current web information. Keep responses concise.",
       tools: buildAssistantTools({
         channel,
         channelMetadata: input.channelMetadata,
         conversationId,
+        memoryStore: this.memoryStore,
         store: this.store,
         workspaceDirectory: this.workspaceDirectory,
       }),

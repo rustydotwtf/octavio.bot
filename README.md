@@ -11,8 +11,8 @@ Current app:
 
 - `apps/review-bot-cli` - publishable PR review CLI package (`@octavio.bot/review`)
 - `apps/site` - static product site for `octavio.bot`
-- `apps/assistant-api` - local Elysia chat assistant API with SQLite history and a durable single active conversation
-- `apps/assistant-telegram` - Telegram adapter for the assistant runtime (polling + webhook)
+- `apps/assistant-api` - local Elysia chat assistant API with SQLite chat/memory stores and a durable single active conversation
+- `apps/assistant-telegram` - Telegram adapter for the assistant runtime (polling + webhook) sharing the same chat/memory stores
 
 Current shared packages:
 
@@ -21,7 +21,7 @@ Current shared packages:
 - `packages/github-review` - GitHub PR metadata and changed-file helpers
 - `packages/agent-code-review` - review orchestration and policy evaluation
 - `packages/prompts` - publishable prompt package (`@octavio.bot/prompts`)
-- `packages/assistant-core` - reusable assistant runtime (chat runner, file + web search tools, SQLite store)
+- `packages/assistant-core` - reusable assistant runtime (chat runner, file/web/memory tools, SQLite stores)
 
 Prompt authoring and packaging:
 
@@ -72,6 +72,7 @@ Useful workflow commands:
 - `.env` stores secrets only (`AI_GATEWAY_API_KEY`, `BRAVE_SEARCH_API_KEY`, `TELEGRAM_BOT_TOKEN`, optional `TELEGRAM_WEBHOOK_SECRET`).
 - Assistant non-secret runtime settings live in root `settings.ts`.
 - Assistant model is fixed to `zai/glm-5` in `settings.ts`.
+- Assistant memory defaults to `assistant.memoryDatabasePath = ~/.octavio/assistant-memory.sqlite`.
 - Assistant API defaults to `assistantApi.host = 127.0.0.1` and `assistantApi.port = 4100`.
 - Assistant API is intentionally local-first and has no built-in auth; do not expose it directly to untrusted networks.
 

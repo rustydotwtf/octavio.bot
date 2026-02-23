@@ -3,8 +3,9 @@
 Local Elysia chat assistant API that uses Vercel AI SDK with SQLite persistence.
 The server keeps exactly one active conversation at a time, and the active
 conversation pointer is stored in SQLite for durability across restarts.
-When another interface (for example Telegram) uses the same SQLite file, both
-interfaces share the same active conversation.
+Memory entries are stored in a second SQLite database.
+When another interface (for example Telegram) uses the same configured assistant
+SQLite paths, both interfaces share the same active conversation and memory.
 
 ## Run
 
@@ -64,6 +65,7 @@ All assistant non-secret runtime defaults now come from root `settings.ts`.
 
 - `assistant.model` is fixed to `zai/glm-5`
 - `assistant.databasePath` defaults to `~/.octavio/assistant.sqlite`
+- `assistant.memoryDatabasePath` defaults to `~/.octavio/assistant-memory.sqlite`
 - `assistant.debugLogMb` defaults to `64` (`0` disables debug-event writes)
 - `assistantApi.host` defaults to `127.0.0.1`
 - `assistantApi.port` defaults to `4100`
@@ -78,6 +80,8 @@ Security posture:
 - `read_file`
 - `patch_file`
 - `web_search`
+- `save_memory` (title + Markdown body, always inserts a new row)
+- `get_memory` (exact-title lookup, newest first)
 
 ## Troubleshooting Debug Logs
 

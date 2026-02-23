@@ -11,6 +11,7 @@ Scope: applies to files under `packages/assistant-core`.
 ## Runtime Design
 
 - `ChatStore` owns SQLite persistence.
+- `MemoryStore` owns append-only memory persistence in a separate SQLite file.
 - `ChatStore` persists the active conversation pointer in SQLite (`app_state`).
 - `ChatStore` also stores channel/message metadata so interfaces can render the
   same conversation differently without changing LLM context shape.
@@ -18,6 +19,8 @@ Scope: applies to files under `packages/assistant-core`.
   shared ring buffer controlled by `ChatStore` `debugLogMb` configuration.
 - `AssistantRunner` owns model execution and streaming behavior.
 - tools should be pure helpers when possible, with thin wrappers for call logging.
+- Memory tools should remain migration-friendly: preserve title/body markdown and
+  stable ids (`id` UUID + `joyful_id`) with minimal assumptions.
 - File tools must stay constrained to the configured workspace directory and reject
   traversal/out-of-workspace paths.
 

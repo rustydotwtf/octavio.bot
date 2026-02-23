@@ -23,6 +23,8 @@ Run from repository root:
 - Polling should be conservative (long-poll timeout + bounded retry backoff).
 - Webhook endpoint must require `TELEGRAM_WEBHOOK_SECRET`.
 - Use `settings.assistantTelegram.allowedChatIds` when restricting access.
+- Shares both chat history and memory tools through `@octavio.bot/assistant-core`
+  using the configured assistant SQLite paths.
 
 ## Documentation Sync
 

@@ -178,14 +178,14 @@ This repository now uses a Bun workspace monorepo:
 
 - `apps/review-bot-cli` - publishable CLI package (`@octavio.bot/review`, binary `octavio-review`)
 - `apps/site` - static product site for `octavio.bot` (idcmd-based)
-- `apps/assistant-api` - local-first Elysia chat assistant API (Vercel AI SDK + SQLite)
-- `apps/assistant-telegram` - Telegram adapter for the assistant runtime (polling + webhook)
+- `apps/assistant-api` - local-first Elysia chat assistant API (Vercel AI SDK + SQLite chat/memory stores)
+- `apps/assistant-telegram` - Telegram adapter for the assistant runtime (polling + webhook) sharing assistant chat/memory stores
 - `packages/config` - runtime env and CLI config parsing
 - `packages/opencode-runner` - OpenCode SDK wrapper for artifact-schema generation and validation retries
 - `packages/github-review` - GitHub REST helpers for PR metadata and changed files
 - `packages/agent-code-review` - report parsing and instruction-driven policy evaluation
 - `packages/prompts` - publishable prompt package (`@octavio.bot/prompts`) and helper utilities
-- `packages/assistant-core` - reusable assistant runtime (chat runner, file tools, SQLite persistence)
+- `packages/assistant-core` - reusable assistant runtime (chat runner, file/web/memory tools, SQLite persistence)
 
 Notes:
 
@@ -226,7 +226,7 @@ Task orchestration notes:
 ### Runtime Expectations
 
 - `.env` should include secrets only (for example `GITHUB_TOKEN`, `OPENCODE_API_KEY`, `AI_GATEWAY_API_KEY`, `BRAVE_SEARCH_API_KEY`, `TELEGRAM_BOT_TOKEN`); non-secret runtime defaults should live in code-level settings
-- Assistant runtime non-secrets are configured in root `settings.ts` (model, db path, debug log cap, API host/port, Telegram mode/polling/webhook defaults)
+- Assistant runtime non-secrets are configured in root `settings.ts` (model, chat db path, memory db path, debug log cap, API host/port, Telegram mode/polling/webhook defaults)
 - Assistant API local env should include `AI_GATEWAY_API_KEY`; include `BRAVE_SEARCH_API_KEY` for web search tool calls
 - Assistant API defaults to loopback (`assistantApi.host = 127.0.0.1`) and is intentionally local-first with no built-in auth
 - Telegram adapter env should include `TELEGRAM_BOT_TOKEN` and `AI_GATEWAY_API_KEY`; include `BRAVE_SEARCH_API_KEY` for web search tool calls; `TELEGRAM_WEBHOOK_SECRET` is required in webhook mode

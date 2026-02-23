@@ -1,5 +1,6 @@
 export { AssistantRunner } from "./chat-runner";
 export { ChatStore } from "./db";
+export { MemoryStore } from "./memory-db";
 export { runPatchFileTool } from "./patch-file";
 export { runReadFileTool } from "./read-file";
 export { runWebSearchTool } from "./web-search";

@@ -1,8 +1,8 @@
 # assistant-telegram
 
 Telegram adapter for the local assistant runtime. It shares the same SQLite
-store and active conversation pointer as `apps/assistant-api`, so all messages
-from API and Telegram flow through one continuous conversation.
+stores and active conversation pointer as `apps/assistant-api`, so all messages
+and memory entries from API and Telegram are shared.
 
 ## Run
 
@@ -36,6 +36,7 @@ All assistant non-secret runtime defaults now come from root `settings.ts`.
 
 - `assistant.model` is fixed to `zai/glm-5`
 - `assistant.databasePath` defaults to `~/.octavio/assistant.sqlite`
+- `assistant.memoryDatabasePath` defaults to `~/.octavio/assistant-memory.sqlite`
 - `assistant.debugLogMb` defaults to `64` (`0` disables debug-event writes)
 - `assistantTelegram.mode` defaults to `polling`
 - `assistantTelegram.allowedChatIds` defaults to allow all chats

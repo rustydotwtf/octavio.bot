@@ -5,10 +5,16 @@ const defaultAssistantDbPath =
     ? `${process.env.HOME}/.octavio/assistant.sqlite`
     : ".octavio/assistant.sqlite";
 
+const defaultAssistantMemoryDbPath =
+  process.env.HOME && process.env.HOME.length > 0
+    ? `${process.env.HOME}/.octavio/assistant-memory.sqlite`
+    : ".octavio/assistant-memory.sqlite";
+
 export const settings = {
   assistant: {
     databasePath: defaultAssistantDbPath,
     debugLogMb: 64,
+    memoryDatabasePath: defaultAssistantMemoryDbPath,
     model: "zai/glm-5",
   },
   assistantApi: {

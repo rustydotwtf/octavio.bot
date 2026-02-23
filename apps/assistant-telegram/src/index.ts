@@ -1,4 +1,8 @@
-import { AssistantRunner, ChatStore } from "@octavio.bot/assistant-core";
+import {
+  AssistantRunner,
+  ChatStore,
+  MemoryStore,
+} from "@octavio.bot/assistant-core";
 import { Elysia } from "elysia";
 
 const { settings } = await import(
@@ -52,8 +56,10 @@ const { assistant, assistantTelegram } = settings;
 const store = new ChatStore(assistant.databasePath, {
   debugLogMb: assistant.debugLogMb,
 });
+const memoryStore = new MemoryStore(assistant.memoryDatabasePath);
 const runner = new AssistantRunner({
   defaultModel: assistant.model,
+  memoryStore,
   store,
   workspaceDirectory: process.cwd(),
 });

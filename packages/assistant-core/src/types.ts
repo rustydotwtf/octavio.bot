@@ -34,6 +34,23 @@ export const webSearchInput = z.object({
 
 export type WebSearchInput = z.infer<typeof webSearchInput>;
 
+export const saveMemoryInput = z.object({
+  body: z
+    .string()
+    .min(1)
+    .describe("Markdown body content to store for this memory entry."),
+  title: z.string().trim().min(1),
+});
+
+export type SaveMemoryInput = z.infer<typeof saveMemoryInput>;
+
+export const getMemoryInput = z.object({
+  limit: z.number().int().positive().max(50).default(10),
+  title: z.string().trim().min(1),
+});
+
+export type GetMemoryInput = z.infer<typeof getMemoryInput>;
+
 export const messageRole = z.enum(["user", "assistant", "system"]);
 export type MessageRole = z.infer<typeof messageRole>;
 

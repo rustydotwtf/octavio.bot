@@ -6,9 +6,22 @@ Includes:
 
 - chat runner built on Vercel AI SDK
 - SQLite persistence with Bun SQLite
-- built-in tools (`read_file`, `patch_file`, `web_search`)
+- built-in tools (`read_file`, `patch_file`, `web_search`, `save_memory`, `get_memory`)
 - `read_file` and `patch_file` stay constrained to the configured workspace directory
+- separate memory SQLite store for append-only title/body memory entries
 - bounded debug event log (`debug_events`) for LLM/runtime troubleshooting
+
+## Memory Store
+
+- Memory entries are stored in a dedicated SQLite database (`MemoryStore`).
+- Each memory row includes:
+  - internal `id` (UUID)
+  - public `joyful_id` (human-friendly unique identifier)
+  - `title` (duplicates are allowed)
+  - `body_markdown`
+  - `created_at`
+- `save_memory` always inserts a new row, even when the same title already exists.
+- `get_memory` returns exact-title matches ordered newest-first.
 
 ## Tool Environment
 

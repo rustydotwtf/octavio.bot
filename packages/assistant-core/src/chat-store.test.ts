@@ -2,12 +2,20 @@ import { afterEach, describe, expect, it } from "bun:test";
 
 import { AssistantRunner } from "./chat-runner";
 import { ChatStore } from "./db";
+import { MemoryStore } from "./memory-db";
 
 const createdDbPaths: string[] = [];
+const createdMemoryDbPaths: string[] = [];
 
 const createDbPath = (): string => {
   const dbPath = `/tmp/octavio-assistant-store-${crypto.randomUUID()}.sqlite`;
   createdDbPaths.push(dbPath);
+  return dbPath;
+};
+
+const createMemoryDbPath = (): string => {
+  const dbPath = `/tmp/octavio-assistant-memory-${crypto.randomUUID()}.sqlite`;
+  createdMemoryDbPaths.push(dbPath);
   return dbPath;
 };
 
@@ -22,7 +30,18 @@ afterEach(async () => {
     }
   }
 
+  for (const dbPath of createdMemoryDbPaths) {
+    for (const suffix of ["", "-shm", "-wal"]) {
+      try {
+        await Bun.file(`${dbPath}${suffix}`).delete();
+      } catch {
+        // Cleanup is best-effort.
+      }
+    }
+  }
+
   createdDbPaths.length = 0;
+  createdMemoryDbPaths.length = 0;
 });
 
 describe("chat store active conversation", () => {
@@ -76,8 +95,10 @@ describe("assistant runner /new command", () => {
   it("returns a plain confirmation and updates active conversation", async () => {
     const dbPath = createDbPath();
     const store = new ChatStore(dbPath);
+    const memoryStore = new MemoryStore(createMemoryDbPath());
     const runner = new AssistantRunner({
       defaultModel: "zai/glm-5",
+      memoryStore,
       store,
       workspaceDirectory: process.cwd(),
     });
